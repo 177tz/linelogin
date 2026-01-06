@@ -3,131 +3,147 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>訂單查詢｜配貨 & 對帳</title>
+  <title>Ormkub｜訂單查詢</title>
   <style>
     :root{
       --bg:#0b0c10;
-      --card:#12131a;
-      --muted:#a6a8b3;
-      --text:#f3f4f6;
-      --line:#242634;
-      --ok:#2dd4bf;
+      --card:#11131a;
+      --card2:#0f1117;
+      --text:#f4f5f7;
+      --muted:rgba(244,245,247,.68);
+      --line:rgba(244,245,247,.10);
+      --line2:rgba(244,245,247,.14);
+      --accent:#9ae6ff;
+      --ok:#34d399;
       --warn:#fbbf24;
       --bad:#fb7185;
-      --btn:#ffffff;
-      --btnText:#0b0c10;
-      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --shadow: 0 18px 55px rgba(0,0,0,.55);
       --radius: 18px;
       --radius2: 14px;
       --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-      --sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans TC", "PingFang TC", "Heiti TC", "Microsoft JhengHei", Arial, "Apple Color Emoji","Segoe UI Emoji";
+      --sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans TC", "PingFang TC", "Heiti TC", "Microsoft JhengHei", Arial;
     }
     *{ box-sizing:border-box; }
     body{
       margin:0;
       font-family:var(--sans);
-      background: radial-gradient(1200px 600px at 20% -10%, rgba(45,212,191,.18), transparent 60%),
-                  radial-gradient(900px 500px at 90% 0%, rgba(251,113,133,.14), transparent 55%),
-                  var(--bg);
       color:var(--text);
+      background:
+        radial-gradient(1200px 650px at 18% -10%, rgba(154,230,255,.14), transparent 55%),
+        radial-gradient(1000px 600px at 92% 0%, rgba(251,113,133,.10), transparent 55%),
+        radial-gradient(900px 520px at 50% 120%, rgba(52,211,153,.08), transparent 55%),
+        var(--bg);
     }
     a{ color:inherit; }
+
     .wrap{
       max-width: 980px;
       margin: 0 auto;
-      padding: 22px 16px 70px;
+      padding: 26px 16px 80px;
     }
-    .header{
+
+    .topbar{
       display:flex;
-      justify-content:space-between;
       align-items:flex-end;
-      gap:12px;
-      margin-bottom: 14px;
+      justify-content:space-between;
+      gap:16px;
+      margin-bottom: 16px;
     }
-    .title{
-      line-height:1.15;
+    .brand{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
     }
-    .title h1{
-      margin:0;
-      font-size: 24px;
-      letter-spacing: .2px;
+    .brand .logo{
+      font-weight: 900;
+      letter-spacing:.2px;
+      font-size: 22px;
+      line-height: 1.1;
     }
-    .title p{
-      margin:6px 0 0;
-      color:var(--muted);
+    .brand .sub{
+      color: var(--muted);
       font-size: 13px;
+      line-height: 1.45;
+      max-width: 740px;
     }
-    .pill{
+
+    .chip{
       font-family:var(--mono);
-      font-size:12px;
-      color:rgba(255,255,255,.85);
-      background: rgba(255,255,255,.06);
-      border:1px solid rgba(255,255,255,.12);
+      font-size: 12px;
+      color: rgba(244,245,247,.78);
+      border:1px solid var(--line2);
+      background: rgba(244,245,247,.05);
       padding: 8px 10px;
       border-radius: 999px;
       white-space: nowrap;
     }
 
     .panel{
-      background: rgba(18,19,26,.92);
-      border: 1px solid rgba(255,255,255,.10);
+      background: linear-gradient(180deg, rgba(244,245,247,.06), rgba(244,245,247,.03));
+      border: 1px solid var(--line);
       box-shadow: var(--shadow);
       border-radius: var(--radius);
       padding: 14px;
-      margin: 12px 0 16px;
-      backdrop-filter: blur(6px);
+      backdrop-filter: blur(8px);
     }
+
     .row{
       display:flex;
       gap:10px;
       align-items:center;
       flex-wrap:wrap;
     }
+
     .input{
-      flex: 1;
-      min-width: 260px;
+      flex:1;
+      min-width: 240px;
       padding: 12px 14px;
       border-radius: 14px;
-      border: 1px solid rgba(255,255,255,.14);
+      border: 1px solid var(--line2);
       outline: none;
-      background: rgba(255,255,255,.06);
+      background: rgba(0,0,0,.25);
       color: var(--text);
       font-size: 15px;
     }
-    .input::placeholder{ color: rgba(255,255,255,.45); }
+    .input::placeholder{ color: rgba(244,245,247,.40); }
     #emailInput{ display:none; }
+
     .btn{
-      padding: 12px 14px;
+      padding: 12px 16px;
       border: 0;
       border-radius: 14px;
       cursor: pointer;
-      background: var(--btn);
-      color: var(--btnText);
-      font-weight: 700;
+      background: rgba(244,245,247,.92);
+      color: #0b0c10;
+      font-weight: 900;
       letter-spacing:.2px;
       min-width: 120px;
+      box-shadow: 0 10px 24px rgba(0,0,0,.25);
     }
     .btn:disabled{
-      opacity:.5;
+      opacity:.55;
       cursor:not-allowed;
     }
+
     .hint{
       margin-top:10px;
       color: var(--muted);
       font-size: 13px;
-      line-height: 1.45;
+      line-height: 1.5;
     }
+
     .status{
       margin-top: 10px;
       font-size: 13px;
       color: var(--muted);
+      white-space: pre-line;
     }
 
     .fileBlock{
       margin-top: 14px;
       border-radius: var(--radius);
-      border: 1px solid rgba(255,255,255,.10);
-      background: rgba(255,255,255,.04);
+      border: 1px solid var(--line);
+      background: rgba(0,0,0,.18);
       overflow:hidden;
     }
     .fileHead{
@@ -136,11 +152,11 @@
       align-items:center;
       gap:10px;
       padding: 12px 14px;
-      border-bottom: 1px solid rgba(255,255,255,.08);
-      background: rgba(255,255,255,.03);
+      border-bottom: 1px solid var(--line);
+      background: rgba(244,245,247,.03);
     }
     .fileName{
-      font-weight: 800;
+      font-weight: 900;
       letter-spacing:.2px;
     }
     .fileMeta{
@@ -148,39 +164,45 @@
       font-size: 12px;
       font-family: var(--mono);
     }
+
     .orders{
       padding: 12px 14px 16px;
-      display: grid;
+      display:grid;
       grid-template-columns: 1fr;
       gap: 12px;
     }
+
     .orderCard{
-      border: 1px solid rgba(255,255,255,.10);
+      border: 1px solid var(--line);
       border-radius: var(--radius);
-      background: rgba(18,19,26,.80);
-      box-shadow: 0 10px 24px rgba(0,0,0,.25);
+      background: rgba(17,19,26,.75);
       overflow:hidden;
     }
+
     .orderTop{
       padding: 12px 14px;
       display:flex;
       justify-content:space-between;
       align-items:flex-start;
       gap:12px;
-      border-bottom: 1px solid rgba(255,255,255,.08);
-      background: rgba(255,255,255,.03);
+      border-bottom: 1px solid var(--line);
+      background: rgba(244,245,247,.03);
     }
+
     .orderId{
       font-family: var(--mono);
       font-size: 12px;
-      color: rgba(255,255,255,.85);
+      color: rgba(244,245,247,.80);
       margin:0 0 4px;
     }
+
     .buyer{
       font-size: 16px;
       font-weight: 900;
       margin:0;
+      letter-spacing:.2px;
     }
+
     .badge{
       display:inline-flex;
       align-items:center;
@@ -188,65 +210,67 @@
       border-radius: 999px;
       padding: 6px 10px;
       font-size: 12px;
-      border: 1px solid rgba(255,255,255,.14);
-      background: rgba(255,255,255,.06);
+      border: 1px solid var(--line2);
+      background: rgba(244,245,247,.05);
       white-space: nowrap;
     }
-    .badge.ok{ border-color: rgba(45,212,191,.35); color: var(--ok); background: rgba(45,212,191,.10); }
+    .badge.ok{ border-color: rgba(52,211,153,.35); color: var(--ok); background: rgba(52,211,153,.10); }
     .badge.warn{ border-color: rgba(251,191,36,.35); color: var(--warn); background: rgba(251,191,36,.10); }
     .badge.bad{ border-color: rgba(251,113,133,.35); color: var(--bad); background: rgba(251,113,133,.10); }
 
     .orderBody{
       padding: 12px 14px 14px;
     }
+
+    .sectionTitle{
+      margin: 14px 0 8px;
+      font-size: 13px;
+      color: rgba(244,245,247,.88);
+      font-weight: 900;
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
+
     .kv{
       display:grid;
       grid-template-columns: 160px 1fr;
       gap: 8px 12px;
       padding: 10px 0;
-      border-bottom: 1px dashed rgba(255,255,255,.12);
+      border-bottom: 1px dashed rgba(244,245,247,.12);
       font-size: 13px;
     }
-    .kv:last-child{ border-bottom: 0; padding-bottom: 0; }
+    .kv:last-child{ border-bottom:0; padding-bottom:0; }
     .k{ color: var(--muted); }
-    .v{ color: rgba(255,255,255,.92); }
+    .v{ color: rgba(244,245,247,.92); }
     .v.mono{ font-family: var(--mono); font-size: 12.5px; }
 
-    .sectionTitle{
-      margin: 14px 0 8px;
-      font-size: 13px;
-      color: rgba(255,255,255,.88);
-      font-weight: 800;
-      display:flex;
-      align-items:center;
-      gap:8px;
-    }
     .table{
       width:100%;
       border-collapse: collapse;
       overflow:hidden;
       border-radius: 14px;
-      border: 1px solid rgba(255,255,255,.10);
+      border: 1px solid var(--line);
     }
     .table th, .table td{
       padding: 10px 10px;
-      border-bottom: 1px solid rgba(255,255,255,.08);
+      border-bottom: 1px solid var(--line);
       vertical-align: top;
       font-size: 13px;
     }
     .table th{
       text-align:left;
-      color: rgba(255,255,255,.80);
-      background: rgba(255,255,255,.04);
-      font-weight: 800;
+      color: rgba(244,245,247,.80);
+      background: rgba(244,245,247,.04);
+      font-weight: 900;
       font-size: 12px;
       letter-spacing: .2px;
     }
     .table tr:last-child td{ border-bottom:0; }
-    .muted{ color: var(--muted); }
+
     .empty{
       padding: 10px 12px;
-      border: 1px dashed rgba(255,255,255,.16);
+      border: 1px dashed rgba(244,245,247,.18);
       border-radius: 14px;
       color: var(--muted);
       font-size: 13px;
@@ -254,9 +278,55 @@
 
     .footerNote{
       margin-top: 16px;
-      color: rgba(255,255,255,.55);
+      color: rgba(244,245,247,.55);
       font-size: 12px;
       line-height: 1.45;
+    }
+
+    /* Loading overlay */
+    .overlay{
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(0,0,0,.55);
+      backdrop-filter: blur(6px);
+      z-index: 9999;
+    }
+    .overlay.show{ display:flex; }
+    .overlayCard{
+      width: min(520px, 100%);
+      border-radius: 18px;
+      border: 1px solid var(--line2);
+      background: rgba(17,19,26,.92);
+      box-shadow: var(--shadow);
+      padding: 16px;
+    }
+    .spinner{
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      border: 2px solid rgba(244,245,247,.25);
+      border-top-color: rgba(244,245,247,.85);
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin{ to{ transform: rotate(360deg); } }
+    .overlayRow{
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+    .overlayTitle{
+      font-weight: 900;
+      letter-spacing:.2px;
+    }
+    .overlayMsg{
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 13px;
+      white-space: pre-line;
     }
 
     @media (max-width: 540px){
@@ -269,22 +339,23 @@
 </head>
 <body>
   <div class="wrap">
-    <div class="header">
-      <div class="title">
-        <h1>訂單查詢｜配貨 & 對帳</h1>
-        <p>輸入 Email 後查詢：會到資料夾內每個訂單試算表的「編號配置 / 配貨 / 對帳表」抓取資料。</p>
+    <div class="topbar">
+      <div class="brand">
+        <div class="logo">Ormkub 訂單查詢</div>
+        <div class="sub">系統會自動讀取您的 LINE 身分並查詢訂單。若是第一次使用，請依提示綁定下單 Email（只需一次）。</div>
       </div>
-      <div class="pill">JSONP · Web App API</div>
+      <div class="chip">secure lookup</div>
     </div>
 
     <div class="panel">
       <div class="row">
-        <input id="emailInput" class="input" type="email" placeholder="請輸入 Email（例如：name@gmail.com）" autocomplete="email" />
+        <input id="emailInput" class="input" type="email" placeholder="請輸入下單時的 Email（首次綁定用）" autocomplete="email" />
         <button id="searchBtn" class="btn">查詢</button>
       </div>
       <div class="hint">
-        • 第一次使用需輸入 Email 做綁定；綁定後下次會用 LINE UID 自動查詢（不用再輸入 Email）<br/>
-        • 綁定資料寫入 <span class="muted">Users</span> 工作表（A Email / D LINE_UID）
+        • 已綁定者：開啟頁面後會自動查詢並顯示結果<br/>
+        • 未綁定者：請輸入「下單 Email」完成綁定後即可查詢<br/>
+        • 綁定資料會寫入 Users（Email / LINE_UID）僅用於本查詢功能
       </div>
       <div id="status" class="status"></div>
     </div>
@@ -304,13 +375,22 @@
     // 例如：const LIFF_ID = "165xxxxxxx-XXXXXXXX";
     const LIFF_ID = "2008825521-dLeF3YrA";
 
-    // （測試用）也可在網址帶入 ?uid=Uxxxxxxxx 來模擬 CURRENT_UID
     const urlParams = new URLSearchParams(location.search);
     const UID_FROM_URL = (urlParams.get("uid") || "").trim();
 
     let CURRENT_UID = UID_FROM_URL || "";
 
     const $ = (id) => document.getElementById(id);
+
+    function showOverlay(title, msg) {
+      $("overlayTitle").textContent = title || "處理中…";
+      $("overlayMsg").textContent = msg || "請稍候";
+      $("overlay").classList.add("show");
+    }
+
+    function hideOverlay() {
+      $("overlay").classList.remove("show");
+    }
 
     function setStatus(msg) {
       $("status").textContent = msg || "";
@@ -605,6 +685,7 @@
 
       $("searchBtn").disabled = true;
       setStatus("查詢中…（正在掃描資料夾內試算表）");
+      showOverlay("查詢中…", "正在為您搜尋訂單資料");
 
       try {
         let res = null;
@@ -619,6 +700,7 @@
             render(res);
             // 已綁定成功後，email 可隱藏（想保留也可以改成 true）
             setEmailInputVisible(false);
+            hideOverlay();
             return;
           }
 
@@ -636,6 +718,7 @@
               setStatus(`查詢完成：掃描 ${res2.scannedFiles} 份檔案，找到 ${res2.matchedFiles} 份有資料。`);
               render(res2);
               setEmailInputVisible(false);
+              hideOverlay();
               return;
             }
 
@@ -644,6 +727,7 @@
             setEmailInputEnabled(true);
             setStatus(res2?.error || "綁定完成但查不到訂單資料，請確認 Email 是否為下單時填寫的 Email。");
             $("emailInput").focus();
+            hideOverlay();
             return;
           }
 
@@ -652,6 +736,7 @@
           setEmailInputEnabled(true);
           setStatus(res?.error || "此帳號尚未綁定 Email，請輸入 Email 進行綁定後再查詢。");
           $("emailInput").focus();
+          hideOverlay();
           return;
         }
 
@@ -661,6 +746,7 @@
         if (!isValidEmail(email)) {
           setStatus("請輸入正確的 Email 格式。");
           $("emailInput").focus();
+          hideOverlay();
           return;
         }
 
@@ -676,6 +762,7 @@
         render({ ok:false, error: String(err?.message || err) });
       } finally {
         $("searchBtn").disabled = false;
+        hideOverlay();
       }
     }
 
@@ -703,7 +790,8 @@
 
           await liff.init({ liffId: LIFF_ID });
           if (!liff.isLoggedIn()) {
-            setStatus("需要登入 LINE 才能自動查詢…");
+            setStatus("正在導向 LINE 登入…");
+            showOverlay("需要登入 LINE", "即將開啟登入畫面，登入後會自動查詢。\n若未自動返回，請回到此頁重新開啟。\n");
             liff.login();
             return;
           }
@@ -714,6 +802,7 @@
         // 有 UID（LIFF 或 URL 參數）就自動查
         if (CURRENT_UID) {
           setEmailInputEnabled(false);
+          showOverlay("自動查詢中…", "正在為您搜尋訂單資料");
           const res = await jsonpCall("searchByUid", { uid: CURRENT_UID });
           if (res && res.ok) {
             setStatus(`自動查詢完成：掃描 ${res.scannedFiles} 份檔案，找到 ${res.matchedFiles} 份有資料。`);
@@ -725,6 +814,7 @@
             setEmailInputEnabled(true);
             setStatus(res?.error || "此帳號尚未綁定 Email，請輸入 Email 進行綁定。\n（綁定後下次就不用再輸入）");
           }
+          hideOverlay();
         } else {
           setEmailInputVisible(true);
           setEmailInputEnabled(true);
@@ -738,5 +828,16 @@
       }
     })();
   </script>
+</script>
+
+  <div id="overlay" class="overlay" aria-live="polite" aria-busy="true">
+    <div class="overlayCard">
+      <div class="overlayRow">
+        <div class="spinner" aria-hidden="true"></div>
+        <div class="overlayTitle" id="overlayTitle">處理中…</div>
+      </div>
+      <div class="overlayMsg" id="overlayMsg">請稍候</div>
+    </div>
+  </div>
 </body>
 </html>
