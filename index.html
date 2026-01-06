@@ -297,15 +297,33 @@
 
   <script>
     // ✅ 你的新部署 /exec
-    const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbxRzDnDjtHPI8LUexKnKLDR5UK6jmUNFanuLz9aMSuAkqabVYcAkWSk0jRRDbP0a72owg/exec";
+    const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbx3yOhOqWcU3uzD0S8IhewoyMMluC0EwacNc0NXA9AuSPOeej0ZoD_RfsUoI9XxuQS1YQ/exec";
 
-    // （可選）若你之後從 LIFF 拿到 uid，就塞這裡；沒有就留空字串
-    let CURRENT_UID = "";
+    // ✅ 若要用 LINE UID 自動查詢：請把你的 LIFF ID 填在這裡（並用 LIFF 開啟此頁）
+    // 例如：const LIFF_ID = "165xxxxxxx-XXXXXXXX";
+    const LIFF_ID = "2008825521-dLeF3YrA";
+
+    // （測試用）也可在網址帶入 ?uid=Uxxxxxxxx 來模擬 CURRENT_UID
+    const urlParams = new URLSearchParams(location.search);
+    const UID_FROM_URL = (urlParams.get("uid") || "").trim();
+
+    let CURRENT_UID = UID_FROM_URL || "";
 
     const $ = (id) => document.getElementById(id);
 
     function setStatus(msg) {
       $("status").textContent = msg || "";
+    }
+
+    function setEmailInputEnabled(enabled) {
+      const input = $("emailInput");
+      input.disabled = !enabled;
+      input.style.opacity = enabled ? "1" : "0.6";
+    }
+
+    function setEmailInputVisible(visible) {
+      const input = $("emailInput");
+      input.style.display = visible ? "" : "none";
     }
 
     function escapeHtml(s) {
@@ -579,22 +597,50 @@
 
     async function doSearch() {
       const email = String($("emailInput").value || "").trim();
-      if (!isValidEmail(email)) {
-        setStatus("請輸入正確的 Email 格式。");
-        $("emailInput").focus();
-        return;
-      }
 
       $("searchBtn").disabled = true;
       setStatus("查詢中…（正在掃描資料夾內試算表）");
 
       try {
-        const res = await jsonpCall("search", { email, uid: CURRENT_UID });
+        let res = null;
+
+        // 1) 有 LINE UID → 優先用 UID 自動查（不用 email）
+        if (CURRENT_UID) {
+          setEmailInputEnabled(false);
+          res = await jsonpCall("searchByUid", { uid: CURRENT_UID });
+
+          if (res && res.ok) {
+            setStatus(`查詢完成：掃描 ${res.scannedFiles} 份檔案，找到 ${res.matchedFiles} 份有資料。`);
+            render(res);
+            // 已綁定成功後，email 可隱藏（想保留也可以改成 true）
+            setEmailInputVisible(false);
+            return;
+          }
+
+          // UID 有，但尚未綁定 email → 讓使用者輸入 email 來綁定
+          setEmailInputVisible(true);
+          setEmailInputEnabled(true);
+          setStatus(res?.error || "此帳號尚未綁定 Email，請輸入 Email 進行綁定後再查詢。");
+          $("emailInput").focus();
+          return;
+        }
+
+        // 2) 沒有 UID → 走手動 email 查
+        setEmailInputVisible(true);
+        setEmailInputEnabled(true);
+        if (!isValidEmail(email)) {
+          setStatus("請輸入正確的 Email 格式。");
+          $("emailInput").focus();
+          return;
+        }
+
+        res = await jsonpCall("search", { email });
         setStatus(res && res.ok
           ? `查詢完成：掃描 ${res.scannedFiles} 份檔案，找到 ${res.matchedFiles} 份有資料。`
           : `查詢失敗：${res?.error || "未知錯誤"}`
         );
         render(res);
+
       } catch (err) {
         setStatus("查詢失敗（連線或部署權限問題）：" + (err?.message || err));
         render({ ok:false, error: String(err?.message || err) });
@@ -603,19 +649,117 @@
       }
     }
 
+    async function bindEmailAndSearch() {
+      const email = String($("emailInput").value || "").trim();
+      if (!CURRENT_UID) {
+        setStatus("目前沒有 LINE UID，無法進行綁定。請用 LIFF 開啟此頁。");
+        return;
+      }
+      if (!isValidEmail(email)) {
+        setStatus("請輸入正確的 Email 格式以完成綁定。");
+        $("emailInput").focus();
+        return;
+      }
+
+      $("searchBtn").disabled = true;
+      setStatus("綁定中…");
+
+      try {
+        await jsonpCall("saveEmail", { email, uid: CURRENT_UID });
+        setStatus("綁定完成 ✅ 正在查詢…");
+        const res = await jsonpCall("searchByUid", { uid: CURRENT_UID });
+
+        setStatus(res && res.ok
+          ? `查詢完成：掃描 ${res.scannedFiles} 份檔案，找到 ${res.matchedFiles} 份有資料。`
+          : `查詢失敗：${res?.error || "未知錯誤"}`
+        );
+        render(res);
+        if (res && res.ok) setEmailInputVisible(false);
+      } catch (err) {
+        setStatus("綁定/查詢失敗：" + (err?.message || err));
+        render({ ok:false, error: String(err?.message || err) });
+      } finally {
+        $("searchBtn").disabled = false;
+      }
+    }
+
     // events
-    $("searchBtn").addEventListener("click", doSearch);
-    $("emailInput").addEventListener("keydown", (e) => {
-      if (e.key === "Enter") doSearch();
+    $("searchBtn").addEventListener("click", async () => {
+      // 有 UID 但尚未綁定時，使用者輸入 email 後，按按鈕走「綁定 + 查詢」
+      if (CURRENT_UID) {
+        // 先試 UID 查；若成功會直接顯示並 return
+        const probe = await jsonpCall("searchByUid", { uid: CURRENT_UID }).catch(() => null);
+        if (probe && probe.ok) {
+          setStatus(`查詢完成：掃描 ${probe.scannedFiles} 份檔案，找到 ${probe.matchedFiles} 份有資料。`);
+          render(probe);
+          setEmailInputVisible(false);
+          return;
+        }
+        // probe 失敗 → 視為需要綁定
+        await bindEmailAndSearch();
+        return;
+      }
+      await doSearch();
+    });
+    $("emailInput").addEventListener("keydown", async (e) => {
+      if (e.key === "Enter") {
+        if (CURRENT_UID) {
+          await bindEmailAndSearch();
+        } else {
+          await doSearch();
+        }
+      }
     });
 
-    // optional: quick ping check
     (async () => {
       try {
         const ping = await jsonpCall("ping", {});
-        if (ping && ping.ok) setStatus("API 已連線 ✅  請輸入 Email 查詢");
+        if (ping && ping.ok) setStatus("API 已連線 ✅");
+
+        // 若有 LIFF_ID，就動態載入 LIFF SDK 並嘗試取得 userId
+        if (LIFF_ID) {
+          await new Promise((resolve, reject) => {
+            const s = document.createElement("script");
+            s.src = "https://static.line-scdn.net/liff/edge/2/sdk.js";
+            s.onload = resolve;
+            s.onerror = reject;
+            document.head.appendChild(s);
+          });
+
+          await liff.init({ liffId: LIFF_ID });
+          if (!liff.isLoggedIn()) {
+            setStatus("需要登入 LINE 才能自動查詢…");
+            liff.login();
+            return;
+          }
+          const profile = await liff.getProfile();
+          CURRENT_UID = (profile.userId || "").trim();
+        }
+
+        // 有 UID（LIFF 或 URL 參數）就自動查
+        if (CURRENT_UID) {
+          setEmailInputEnabled(false);
+          const res = await jsonpCall("searchByUid", { uid: CURRENT_UID });
+          if (res && res.ok) {
+            setStatus(`自動查詢完成：掃描 ${res.scannedFiles} 份檔案，找到 ${res.matchedFiles} 份有資料。`);
+            render(res);
+            setEmailInputVisible(false);
+          } else {
+            // 尚未綁定 → 顯示 email 輸入
+            setEmailInputVisible(true);
+            setEmailInputEnabled(true);
+            setStatus(res?.error || "此帳號尚未綁定 Email，請輸入 Email 進行綁定。\n（綁定後下次就不用再輸入）");
+          }
+        } else {
+          setEmailInputVisible(true);
+          setEmailInputEnabled(true);
+          setStatus("請輸入 Email 查詢（或用 LIFF 開啟以使用 UID 自動查詢）");
+        }
+
       } catch {
         setStatus("API 連線測試失敗 ⚠️ 請確認 Web App 部署權限為『任何人』");
+        setEmailInputVisible(true);
+        setEmailInputEnabled(true);
       }
     })();
   </script>
