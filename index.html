@@ -4,149 +4,209 @@
   <base target="_top">
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
-  <title>訂單查詢系統</title>
+  <title>訂單查詢系統 - 除錯模式</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 
   <style>
-    body { background-color: #f8f9fa; padding: 20px; }
-    .card { margin-bottom: 15px; border: none; shadow: 0 2px 4px rgba(0,0,0,0.1); }
-    .loading-overlay {
-      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(255,255,255,0.9); z-index: 9999;
-      display: flex; justify-content: center; align-items: center; flex-direction: column;
-    }
+    body { background-color: #f8f9fa; padding: 10px; padding-bottom: 250px; /* 預留底部空間給 Log */ }
+    .card { margin-bottom: 15px; border: none; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
     .hidden { display: none !important; }
+    
+    /* 除錯視窗樣式 */
+    #debug-console {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 220px;
+      background-color: #212529;
+      color: #00ff00;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      padding: 10px;
+      overflow-y: auto;
+      z-index: 10000;
+      border-top: 3px solid #ffc107;
+    }
+    .log-line { margin-bottom: 2px; border-bottom: 1px solid #333; }
+    .log-err { color: #ff4444; font-weight: bold; }
+    .log-warn { color: #ffbb33; }
   </style>
 </head>
 <body>
 
-  <div id="loading" class="loading-overlay">
+  <div id="loading" class="text-center py-4">
     <div class="spinner-border text-primary" role="status"></div>
-    <p class="mt-2" id="loading-text">系統初始化中...</p>
+    <p class="mt-2" id="loading-text">系統啟動中...</p>
   </div>
 
   <div class="container" style="max-width: 600px;">
-    <h3 class="text-center mb-4">📦 訂單查詢</h3>
+    <h4 class="text-center mb-4">📦 訂單查詢 (除錯版)</h4>
 
     <div id="login-section" class="card p-4 hidden">
       <div class="mb-3">
-        <label for="emailInput" class="form-label">請輸入您的 Email 查詢</label>
+        <label class="form-label">請輸入 Email 查詢</label>
         <input type="email" class="form-control" id="emailInput" placeholder="name@example.com">
-        <div class="form-text text-muted">第一次查詢後將自動綁定您的 LINE 帳號。</div>
       </div>
       <button onclick="performSearch()" class="btn btn-primary w-100">查詢訂單</button>
     </div>
 
     <div id="welcome-section" class="alert alert-success hidden">
-      歡迎回來！正在為您載入 <strong id="user-email-display"></strong> 的訂單...
+      已識別用戶：<strong id="user-email-display"></strong>
     </div>
 
     <div id="result-section" class="hidden">
-      <h5 class="mb-3">查詢結果</h5>
-      <div id="orders-container">
-        </div>
-      <button onclick="resetSearch()" class="btn btn-outline-secondary w-100 mt-3">查詢其他 Email</button>
+      <h5>查詢結果：</h5>
+      <div id="orders-container"></div>
+      <button onclick="resetSearch()" class="btn btn-outline-secondary w-100 mt-3">重新查詢</button>
     </div>
-    
-    <div id="error-msg" class="alert alert-danger hidden mt-3"></div>
+  </div>
+
+  <div id="debug-console">
+    <div class="d-flex justify-content-between sticky-top bg-dark border-bottom pb-1 mb-1">
+      <strong>📝 系統紀錄 (Debug Log)</strong>
+      <button class="btn btn-sm btn-light py-0" onclick="document.getElementById('debug-content').innerHTML=''">清空</button>
+    </div>
+    <div id="debug-content">
+      </div>
   </div>
 
   <script>
-    // ★★★ 請在此填入你的 LIFF ID ★★★
+    // ★★★ 設定區 ★★★
     const MY_LIFF_ID = "你的LIFF_ID_填在這裡"; 
+    // 如果你在電腦測試，請保持上面為 "" 或填入正確 ID
     
-    let userUid = ""; // 儲存全域 UID
+    let userUid = "";
 
-    // 1. 頁面載入後初始化 LIFF
+    // === 紀錄工具函式 ===
+    function log(msg, type = 'info') {
+      const el = document.getElementById('debug-content');
+      const time = new Date().toLocaleTimeString();
+      let colorClass = '';
+      if(type === 'error') colorClass = 'log-err';
+      if(type === 'warn') colorClass = 'log-warn';
+      
+      const line = `<div class="log-line ${colorClass}">[${time}] ${msg}</div>`;
+      el.innerHTML += line;
+      // 自動捲動到底部
+      document.getElementById('debug-console').scrollTop = document.getElementById('debug-console').scrollHeight;
+      console.log(msg); // 同步印在瀏覽器 Console
+    }
+
+    window.onerror = function(message, source, lineno, colno, error) {
+      log(`全域錯誤捕獲: ${message}`, 'error');
+    };
+
+    // 1. 初始化
     window.onload = function() {
+      log("網頁載入完成 (window.onload)");
       initializeLiff();
     };
 
     function initializeLiff() {
-      // 如果沒有填 LIFF ID，直接顯示輸入框 (方便在瀏覽器測試)
-      if (MY_LIFF_ID === "你的LIFF_ID_填在這裡" || !MY_LIFF_ID) {
-        console.warn("未設定 LIFF ID，進入瀏覽器測試模式");
-        hideLoading();
+      log("準備初始化 LIFF...");
+      
+      if (!MY_LIFF_ID) {
+        log("⚠️ 未設定 LIFF ID，切換至電腦測試模式 (略過 LIFF)", 'warn');
+        document.getElementById('loading').classList.add('hidden');
         document.getElementById('login-section').classList.remove('hidden');
         return;
       }
 
       liff.init({ liffId: MY_LIFF_ID })
         .then(() => {
+          log("LIFF 初始化成功");
           if (!liff.isLoggedIn()) {
+            log("用戶未登入，跳轉至 LINE 登入頁...");
             liff.login();
           } else {
-            // 取得使用者資料
-            liff.getProfile()
-              .then(profile => {
-                userUid = profile.userId;
-                console.log("取得 UID: " + userUid);
-                checkBindingStatus(userUid);
-              })
-              .catch(err => {
-                console.error('LIFF Profile Error:', err);
-                showError("無法取得使用者資訊");
-              });
+            log("用戶已登入 LINE");
+            getLiffProfile();
           }
         })
         .catch((err) => {
-          console.error('LIFF Init Error:', err);
-          // 初始化失敗也顯示輸入框，避免卡死
-          hideLoading();
+          log("❌ LIFF 初始化失敗: " + err, 'error');
+          log("顯示手動輸入框以避免卡死", 'warn');
+          document.getElementById('loading').classList.add('hidden');
           document.getElementById('login-section').classList.remove('hidden');
         });
     }
 
-    // 2. 檢查此 UID 是否已綁定 Email
+    function getLiffProfile() {
+      log("正在取得使用者資料 (Profile)...");
+      liff.getProfile()
+        .then(profile => {
+          userUid = profile.userId;
+          log("✅ 成功取得 UID: " + userUid);
+          checkBindingStatus(userUid);
+        })
+        .catch(err => {
+          log("❌ 取得 Profile 失敗: " + err, 'error');
+          alert("無法取得 LINE 使用者資訊");
+        });
+    }
+
+    // 2. 檢查綁定 (連線後端)
     function checkBindingStatus(uid) {
-      document.getElementById('loading-text').innerText = "檢查帳號綁定中...";
+      log("準備連線 Google Sheet 檢查綁定狀態...");
+      log("呼叫後端函式: checkUidLink");
       
+      if (typeof google === 'undefined') {
+        log("❌ 錯誤: google 物件不存在 (請確認是否在 GAS 部署環境)", 'error');
+        return;
+      }
+
       google.script.run
         .withSuccessHandler(function(boundEmail) {
+          log("📡 後端回應成功！");
           if (boundEmail) {
-            // 已綁定：自動執行查詢
-            console.log("已綁定 Email: " + boundEmail);
+            log("✅ 此 UID 已綁定 Email: " + boundEmail);
             document.getElementById('welcome-section').classList.remove('hidden');
             document.getElementById('user-email-display').innerText = boundEmail;
             
-            // 呼叫後端查詢
+            // 自動查詢
             callBackendSearch(boundEmail, uid);
           } else {
-            // 未綁定：顯示輸入框
-            console.log("未綁定，顯示輸入框");
-            hideLoading();
+            log("ℹ️ 此 UID 尚未綁定 Email");
+            document.getElementById('loading').classList.add('hidden');
             document.getElementById('login-section').classList.remove('hidden');
           }
         })
         .withFailureHandler(function(err) {
-          showError("系統連線錯誤：" + err);
-          hideLoading();
+          log("❌ 後端連線失敗 (checkUidLink): " + err, 'error');
+          log("可能是權限問題，請檢查部署設定 (誰可以存取: 任何人)", 'warn');
+          document.getElementById('loading').classList.add('hidden');
+          document.getElementById('login-section').classList.remove('hidden');
         })
         .checkUidLink(uid);
     }
 
-    // 3. 使用者手動點擊查詢
+    // 3. 執行查詢
     function performSearch() {
       var email = document.getElementById('emailInput').value.trim();
       if (!email) {
-        alert("請輸入 Email");
+        log("請輸入 Email", 'warn');
         return;
       }
       
-      showLoading("正在查詢並同步資料...");
+      log("使用者點擊查詢，Email: " + email);
       document.getElementById('login-section').classList.add('hidden');
+      document.getElementById('loading').classList.remove('hidden');
       
       callBackendSearch(email, userUid);
     }
 
-    // 4. 呼叫後端 searchOrdersWithLink
+    // 4. 呼叫後端搜尋
     function callBackendSearch(email, uid) {
+      log(`準備查詢訂單... Email: ${email}, UID: ${uid}`);
+      log("呼叫後端函式: searchOrdersWithLink");
+
       google.script.run
         .withSuccessHandler(showResults)
         .withFailureHandler(function(e){
-          showError("查詢失敗：" + e);
-          hideLoading();
+          log("❌ 查詢失敗 (searchOrdersWithLink): " + e, 'error');
+          document.getElementById('loading').classList.add('hidden');
           document.getElementById('login-section').classList.remove('hidden');
         })
         .searchOrdersWithLink(email, uid);
@@ -154,57 +214,40 @@
 
     // 5. 顯示結果
     function showResults(data) {
-      hideLoading();
-      document.getElementById('welcome-section').classList.add('hidden'); // 隱藏歡迎詞
+      log("📡 收到查詢結果資料");
+      log("資料長度: " + (data ? data.length : 0));
+      
+      document.getElementById('loading').classList.add('hidden');
+      document.getElementById('welcome-section').classList.add('hidden');
       document.getElementById('result-section').classList.remove('hidden');
       
       const container = document.getElementById('orders-container');
       container.innerHTML = "";
 
       if (!data || data.length === 0) {
-        container.innerHTML = '<div class="alert alert-warning">查無訂單資料 (或是測試模式中未回傳資料)</div>';
+        container.innerHTML = '<div class="alert alert-warning">查無資料 (或後端回傳為空)</div>';
+        log("顯示查無資料訊息");
         return;
       }
 
-      // 動態產生訂單卡片 (假設後端回傳格式是陣列)
-      // 注意：你需要根據你實際 Excel 讀取後的欄位順序來調整這裡
-      data.forEach(function(row) {
-        // 假設 row[0] 是訂單號, row[1] 是日期, row[2] 是金額 (請依實際情況調整)
+      data.forEach(function(row, index) {
+        // 這裡只是範例，請依照你的資料結構調整
         var cardHtml = `
           <div class="card p-3">
-            <div class="d-flex justify-content-between align-items-center mb-2">
-              <h6 class="m-0 text-primary fw-bold">${row[0] || '訂單'}</h6>
-              <span class="badge bg-secondary">${row[1] || ''}</span>
-            </div>
-            <p class="mb-1 text-muted">${row.join(', ')}</p>
+             <strong>訂單 #${index + 1}</strong>
+             <p class="m-0">${row.join(', ')}</p>
           </div>
         `;
         container.innerHTML += cardHtml;
       });
+      log("✅ 畫面渲染完成");
     }
 
-    // 工具：重置
     function resetSearch() {
+      log("使用者重置查詢");
       document.getElementById('result-section').classList.add('hidden');
       document.getElementById('login-section').classList.remove('hidden');
       document.getElementById('emailInput').value = "";
-    }
-
-    // 工具：顯示錯誤
-    function showError(msg) {
-      var el = document.getElementById('error-msg');
-      el.innerText = msg;
-      el.classList.remove('hidden');
-    }
-
-    // 工具：Loading 控制
-    function showLoading(text) {
-      document.getElementById('loading').classList.remove('hidden');
-      if(text) document.getElementById('loading-text').innerText = text;
-    }
-    
-    function hideLoading() {
-      document.getElementById('loading').classList.add('hidden');
     }
 
   </script>
