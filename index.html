@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LIFF 報名</title>
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <style>
+        body { font-family: sans-serif; padding: 20px; text-align: center; }
+        button { background-color: #06c755; color: white; border: none; padding: 15px 30px; border-radius: 8px; font-size: 16px; margin-top: 20px; width: 100%; cursor: pointer; }
+        #status { margin-top: 20px; color: #666; font-size: 14px; word-break: break-all; }
+        img { border-radius: 50%; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <h2>LIFF 資料傳送測試</h2>
+    <div id="profile">讀取中...</div>
+    <button id="btn" onclick="sendData()" disabled>傳送資料</button>
+    <div id="status"></div>
+
+    <script>
+        // 1. 填入你的設定
+        const LIFF_ID = '2008825521-dLeF3YrA'; 
+        // 2. 填入剛剛複製的 GAS 網址
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbyLNI-3vZwXqpNArm-Kn-ULkBw4ng3BgVHn59YOdmRAQWKt-Zgyqlpvidm8XH1nF2Cn/exec';
+
+        let userProfile = {};
+
+        async function main() {
+            try {
+                // 初始化 LIFF
+                await liff.init({ liffId: LIFF_ID });
+                
+                if (!liff.isLoggedIn()) {
+                    liff.login();
+                    return;
+                }
+
+                const profile = await liff.getProfile();
+                userProfile = profile;
+
+                document.getElementById('profile').innerHTML = `
+                    <img src="${profile.pictureUrl}" width="60"><br>
+                    你好，<b>${profile.displayName}</b>
+                `;
+                
+                document.getElementById('btn').disabled = false;
+                document.getElementById('status').innerText = '準備就緒';
+
+            } catch (err) {
+                document.getElementById('status').innerText = '初始化錯誤: ' + err.message;
+                alert('LIFF Error: ' + err.message);
+            }
+        }
+
+        function sendData() {
+            const status = document.getElementById('status');
+            status.innerText = '傳送中...';
+
+            // 構建資料
+            // 注意：GAS post 請求需要特殊的格式
+            const formData = new FormData();
+            formData.append('data', JSON.stringify({
+                userId: userProfile.userId,
+                displayName: userProfile.displayName,
+                email: 'c1209.sam@gmail.com' // 測試用
+            }));
+
+            // 使用 fetch 發送
+            fetch(GAS_URL, {
+                method: 'POST',
+                mode: 'no-cors', // 關鍵：避開跨域檢查
+                body: JSON.stringify({
+                    userId: userProfile.userId,
+                    displayName: userProfile.displayName,
+                    email: 'c1209.sam@gmail.com'
+                })
+            }).then(() => {
+                status.innerText = '已送出！請檢查試算表。';
+                alert('資料已傳送！');
+                liff.closeWindow(); // 成功後關閉視窗
+            }).catch(err => {
+                status.innerText = '傳送失敗: ' + err;
+            });
+        }
+
+        main();
+    </script>
+</body>
+</html>
