@@ -411,6 +411,13 @@
       $("overlay").classList.remove("show");
     }
 
+function setSearchButtonLabel(mode) {
+  const btn = $("searchBtn");
+  if (!btn) return;
+  // mode: "search" | "bind"
+  btn.textContent = mode === "bind" ? "綁定並查詢" : "查詢";
+}
+
     function setStatus(msg) {
       $("status").textContent = msg || "";
     }
@@ -422,13 +429,15 @@
     }
 
     function setEmailInputVisible(visible) {
-      const input = $("emailInput");
-      input.style.display = visible ? "" : "none";
-    }
+  	const input = $("emailInput");
+  	// CSS 預設 display:none，所以要顯示時必須強制指定 display
+  	input.style.display = visible ? "block" : "none";
+}
 
-    // 初始：先隱藏 Email 輸入框；只有確認 UID 尚未綁定時才顯示
-    setEmailInputVisible(false);
-    setEmailInputEnabled(false);
+// 初始：先隱藏 Email 輸入框；只有確認 UID 尚未綁定時才顯示
+setEmailInputVisible(false);
+setEmailInputEnabled(false);
+setSearchButtonLabel("search");
 
     function escapeHtml(s) {
       return String(s ?? "")
@@ -721,6 +730,7 @@
             setChip("已綁定 · 已顯示訂單", "ok");
             // 已綁定成功後，email 可隱藏（想保留也可以改成 true）
             setEmailInputVisible(false);
+            setSearchButtonLabel("search");
             hideOverlay();
             return;
           }
@@ -741,6 +751,7 @@
               render(res2);
               setChip("已綁定 · 已顯示訂單", "ok");
               setEmailInputVisible(false);
+setSearchButtonLabel("search");
               hideOverlay();
               return;
             }
@@ -757,17 +768,19 @@
 
           // 尚未輸入 Email 或格式不正確 → 顯示輸入框提示綁定
           setEmailInputVisible(true);
-          setEmailInputEnabled(true);
-          setStatus(res?.error || "此帳號尚未綁定 Email，請輸入 Email 進行綁定後再查詢。");
-          setChip("尚未綁定 Email", "warn");
-          $("emailInput").focus();
-          hideOverlay();
-          return;
+setEmailInputEnabled(true);
+setSearchButtonLabel("bind");
+setStatus(res?.error || "此帳號尚未綁定 Email，請輸入 Email 進行綁定後再查詢。");
+setChip("尚未綁定 Email", "warn");
+$("emailInput").focus();
+hideOverlay();
+return;
         }
 
         // 2) 沒有 UID → 走手動 email 查
         setEmailInputVisible(true);
         setEmailInputEnabled(true);
+        setSearchButtonLabel("search");
         if (!isValidEmail(email)) {
           setStatus("請輸入正確的 Email 格式。");
           $("emailInput").focus();
@@ -843,13 +856,15 @@
             setStatus(`自動查詢完成：掃描 ${res.scannedFiles} 份檔案，找到 ${res.matchedFiles} 份有資料。`);
             render(res);
             setEmailInputVisible(false);
+ setSearchButtonLabel("search");
             setChip("已綁定 · 已顯示訂單", "ok");
           } else {
             // 尚未綁定 → 顯示 email 輸入
-            setEmailInputVisible(true);
-            setEmailInputEnabled(true);
-            setStatus(res?.error || "此帳號尚未綁定 Email，請輸入 Email 進行綁定。\n（綁定後下次就不用再輸入）");
-            setChip("尚未綁定 Email", "warn");
+setEmailInputVisible(true);
+setEmailInputEnabled(true);
+setSearchButtonLabel("bind");
+setStatus(res?.error || "此帳號尚未綁定 Email，請輸入 Email 進行綁定。\n（綁定後下次就不用再輸入）");
+setChip("尚未綁定 Email", "warn");
           }
           hideOverlay();
         } else {
