@@ -78,6 +78,10 @@
       white-space: nowrap;
     }
 
+    .chip.ok{ border-color: rgba(52,211,153,.35); background: rgba(52,211,153,.10); color: var(--ok); }
+    .chip.warn{ border-color: rgba(251,191,36,.35); background: rgba(251,191,36,.10); color: var(--warn); }
+    .chip.bad{ border-color: rgba(251,113,133,.35); background: rgba(251,113,133,.10); color: var(--bad); }
+
     .panel{
       background: linear-gradient(180deg, rgba(244,245,247,.06), rgba(244,245,247,.03));
       border: 1px solid var(--line);
@@ -344,7 +348,7 @@
         <div class="logo">Ormkub 訂單查詢</div>
         <div class="sub">系統會自動讀取您的 LINE 身分並查詢訂單。若是第一次使用，請依提示綁定下單 Email（只需一次）。</div>
       </div>
-      <div class="chip">secure lookup</div>
+      <div id="chip" class="chip">連線中…</div>
     </div>
 
     <div class="panel">
@@ -381,6 +385,21 @@
     let CURRENT_UID = UID_FROM_URL || "";
 
     const $ = (id) => document.getElementById(id);
+
+    function setChip(text, tone = "") {
+      const el = $("chip");
+      if (!el) return;
+      el.textContent = text || "";
+      el.classList.remove("ok", "warn", "bad");
+      if (tone) el.classList.add(tone);
+    }
+
+    function maskUid(uid) {
+      const s = String(uid || "").trim();
+      if (!s) return "";
+      if (s.length <= 10) return s;
+      return s.slice(0, 4) + "…" + s.slice(-4);
+    }
 
     function showOverlay(title, msg) {
       $("overlayTitle").textContent = title || "處理中…";
@@ -686,6 +705,7 @@
       $("searchBtn").disabled = true;
       setStatus("查詢中…（正在掃描資料夾內試算表）");
       showOverlay("查詢中…", "正在為您搜尋訂單資料");
+      setChip("查詢中…", "warn");
 
       try {
         let res = null;
@@ -698,6 +718,7 @@
           if (res && res.ok) {
             setStatus(`查詢完成：掃描 ${res.scannedFiles} 份檔案，找到 ${res.matchedFiles} 份有資料。`);
             render(res);
+            setChip("已綁定 · 已顯示訂單", "ok");
             // 已綁定成功後，email 可隱藏（想保留也可以改成 true）
             setEmailInputVisible(false);
             hideOverlay();
@@ -710,6 +731,7 @@
             setEmailInputVisible(true);
             setEmailInputEnabled(false);
             setStatus("綁定中…");
+            setChip("綁定中…", "warn");
 
             await jsonpCall("saveEmail", { email, uid: CURRENT_UID });
             const res2 = await jsonpCall("searchByUid", { uid: CURRENT_UID });
@@ -717,6 +739,7 @@
             if (res2 && res2.ok) {
               setStatus(`查詢完成：掃描 ${res2.scannedFiles} 份檔案，找到 ${res2.matchedFiles} 份有資料。`);
               render(res2);
+              setChip("已綁定 · 已顯示訂單", "ok");
               setEmailInputVisible(false);
               hideOverlay();
               return;
@@ -726,6 +749,7 @@
             setEmailInputVisible(true);
             setEmailInputEnabled(true);
             setStatus(res2?.error || "綁定完成但查不到訂單資料，請確認 Email 是否為下單時填寫的 Email。");
+            setChip("已綁定 · 查無訂單", "warn");
             $("emailInput").focus();
             hideOverlay();
             return;
@@ -735,6 +759,7 @@
           setEmailInputVisible(true);
           setEmailInputEnabled(true);
           setStatus(res?.error || "此帳號尚未綁定 Email，請輸入 Email 進行綁定後再查詢。");
+          setChip("尚未綁定 Email", "warn");
           $("emailInput").focus();
           hideOverlay();
           return;
@@ -756,10 +781,14 @@
           : `查詢失敗：${res?.error || "未知錯誤"}`
         );
         render(res);
+        if (res && res.ok) {
+          setChip("已顯示訂單", "ok");
+        }
 
       } catch (err) {
         setStatus("查詢失敗（連線或部署權限問題）：" + (err?.message || err));
         render({ ok:false, error: String(err?.message || err) });
+        setChip("查詢失敗", "bad");
       } finally {
         $("searchBtn").disabled = false;
         hideOverlay();
@@ -767,16 +796,19 @@
     }
 
 
-    // events
-    $("searchBtn").addEventListener("click", doSearch);
-    $("emailInput").addEventListener("keydown", (e) => {
-      if (e.key === "Enter") doSearch();
-    });
+    async function initPage() {
+      setChip("連線中…");
+      hideOverlay();
+      // events
+      $("searchBtn").addEventListener("click", doSearch);
+      $("emailInput").addEventListener("keydown", (e) => {
+        if (e.key === "Enter") doSearch();
+      });
 
-    (async () => {
       try {
         const ping = await jsonpCall("ping", {});
         if (ping && ping.ok) setStatus("API 已連線 ✅");
+        if (ping && ping.ok) setChip("API 已連線", "ok");
 
         // 若有 LIFF_ID，就動態載入 LIFF SDK 並嘗試取得 userId
         if (LIFF_ID) {
@@ -792,43 +824,52 @@
           if (!liff.isLoggedIn()) {
             setStatus("正在導向 LINE 登入…");
             showOverlay("需要登入 LINE", "即將開啟登入畫面，登入後會自動查詢。\n若未自動返回，請回到此頁重新開啟。\n");
+            setChip("需要登入 LINE", "warn");
             liff.login();
             return;
           }
           const profile = await liff.getProfile();
           CURRENT_UID = (profile.userId || "").trim();
+          setChip("已登入 LINE · " + maskUid(CURRENT_UID), "ok");
         }
 
         // 有 UID（LIFF 或 URL 參數）就自動查
         if (CURRENT_UID) {
           setEmailInputEnabled(false);
           showOverlay("自動查詢中…", "正在為您搜尋訂單資料");
+          setChip("自動查詢中…", "warn");
           const res = await jsonpCall("searchByUid", { uid: CURRENT_UID });
           if (res && res.ok) {
             setStatus(`自動查詢完成：掃描 ${res.scannedFiles} 份檔案，找到 ${res.matchedFiles} 份有資料。`);
             render(res);
             setEmailInputVisible(false);
+            setChip("已綁定 · 已顯示訂單", "ok");
           } else {
             // 尚未綁定 → 顯示 email 輸入
             setEmailInputVisible(true);
             setEmailInputEnabled(true);
             setStatus(res?.error || "此帳號尚未綁定 Email，請輸入 Email 進行綁定。\n（綁定後下次就不用再輸入）");
+            setChip("尚未綁定 Email", "warn");
           }
           hideOverlay();
         } else {
           setEmailInputVisible(true);
           setEmailInputEnabled(true);
           setStatus("請輸入 Email 查詢（或用 LIFF 開啟以使用 UID 自動查詢）");
+          setChip("請輸入 Email", "warn");
         }
 
       } catch {
         setStatus("API 連線測試失敗 ⚠️ 請確認 Web App 部署權限為『任何人』");
         setEmailInputVisible(true);
         setEmailInputEnabled(true);
+        setChip("連線失敗", "bad");
       }
-    })();
+    }
+
+    // 等整頁 DOM（包含 overlay）都載入後再初始化，避免找不到 overlay 元素
+    window.addEventListener("DOMContentLoaded", initPage);
   </script>
-</script>
 
   <div id="overlay" class="overlay" aria-live="polite" aria-busy="true">
     <div class="overlayCard">
