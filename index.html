@@ -95,6 +95,7 @@
       font-size: 15px;
     }
     .input::placeholder{ color: rgba(255,255,255,.45); }
+    #emailInput{ display:none; }
     .btn{
       padding: 12px 14px;
       border: 0;
@@ -282,8 +283,8 @@
         <button id="searchBtn" class="btn">查詢</button>
       </div>
       <div class="hint">
-        • 查詢會自動記錄到 <span class="muted">Users</span> 工作表（email / uid / 時間）<br/>
-        • 如果你之後接上 LIFF，將 <span class="muted">CURRENT_UID</span> 填入即可（可選）
+        • 第一次使用需輸入 Email 做綁定；綁定後下次會用 LINE UID 自動查詢（不用再輸入 Email）<br/>
+        • 綁定資料寫入 <span class="muted">Users</span> 工作表（A Email / D LINE_UID）
       </div>
       <div id="status" class="status"></div>
     </div>
@@ -325,6 +326,10 @@
       const input = $("emailInput");
       input.style.display = visible ? "" : "none";
     }
+
+    // 初始：先隱藏 Email 輸入框；只有確認 UID 尚未綁定時才顯示
+    setEmailInputVisible(false);
+    setEmailInputEnabled(false);
 
     function escapeHtml(s) {
       return String(s ?? "")
@@ -617,7 +622,32 @@
             return;
           }
 
-          // UID 有，但尚未綁定 email → 讓使用者輸入 email 來綁定
+          // UID 有，但尚未綁定 email
+          // 若使用者已輸入 Email（格式正確）→ 直接綁定並再查一次
+          if (isValidEmail(email)) {
+            setEmailInputVisible(true);
+            setEmailInputEnabled(false);
+            setStatus("綁定中…");
+
+            await jsonpCall("saveEmail", { email, uid: CURRENT_UID });
+            const res2 = await jsonpCall("searchByUid", { uid: CURRENT_UID });
+
+            if (res2 && res2.ok) {
+              setStatus(`查詢完成：掃描 ${res2.scannedFiles} 份檔案，找到 ${res2.matchedFiles} 份有資料。`);
+              render(res2);
+              setEmailInputVisible(false);
+              return;
+            }
+
+            // 綁定後仍查不到（可能 email 不在任何訂單）
+            setEmailInputVisible(true);
+            setEmailInputEnabled(true);
+            setStatus(res2?.error || "綁定完成但查不到訂單資料，請確認 Email 是否為下單時填寫的 Email。");
+            $("emailInput").focus();
+            return;
+          }
+
+          // 尚未輸入 Email 或格式不正確 → 顯示輸入框提示綁定
           setEmailInputVisible(true);
           setEmailInputEnabled(true);
           setStatus(res?.error || "此帳號尚未綁定 Email，請輸入 Email 進行綁定後再查詢。");
@@ -649,66 +679,11 @@
       }
     }
 
-    async function bindEmailAndSearch() {
-      const email = String($("emailInput").value || "").trim();
-      if (!CURRENT_UID) {
-        setStatus("目前沒有 LINE UID，無法進行綁定。請用 LIFF 開啟此頁。");
-        return;
-      }
-      if (!isValidEmail(email)) {
-        setStatus("請輸入正確的 Email 格式以完成綁定。");
-        $("emailInput").focus();
-        return;
-      }
-
-      $("searchBtn").disabled = true;
-      setStatus("綁定中…");
-
-      try {
-        await jsonpCall("saveEmail", { email, uid: CURRENT_UID });
-        setStatus("綁定完成 ✅ 正在查詢…");
-        const res = await jsonpCall("searchByUid", { uid: CURRENT_UID });
-
-        setStatus(res && res.ok
-          ? `查詢完成：掃描 ${res.scannedFiles} 份檔案，找到 ${res.matchedFiles} 份有資料。`
-          : `查詢失敗：${res?.error || "未知錯誤"}`
-        );
-        render(res);
-        if (res && res.ok) setEmailInputVisible(false);
-      } catch (err) {
-        setStatus("綁定/查詢失敗：" + (err?.message || err));
-        render({ ok:false, error: String(err?.message || err) });
-      } finally {
-        $("searchBtn").disabled = false;
-      }
-    }
 
     // events
-    $("searchBtn").addEventListener("click", async () => {
-      // 有 UID 但尚未綁定時，使用者輸入 email 後，按按鈕走「綁定 + 查詢」
-      if (CURRENT_UID) {
-        // 先試 UID 查；若成功會直接顯示並 return
-        const probe = await jsonpCall("searchByUid", { uid: CURRENT_UID }).catch(() => null);
-        if (probe && probe.ok) {
-          setStatus(`查詢完成：掃描 ${probe.scannedFiles} 份檔案，找到 ${probe.matchedFiles} 份有資料。`);
-          render(probe);
-          setEmailInputVisible(false);
-          return;
-        }
-        // probe 失敗 → 視為需要綁定
-        await bindEmailAndSearch();
-        return;
-      }
-      await doSearch();
-    });
-    $("emailInput").addEventListener("keydown", async (e) => {
-      if (e.key === "Enter") {
-        if (CURRENT_UID) {
-          await bindEmailAndSearch();
-        } else {
-          await doSearch();
-        }
-      }
+    $("searchBtn").addEventListener("click", doSearch);
+    $("emailInput").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") doSearch();
     });
 
     (async () => {
