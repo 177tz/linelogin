@@ -1,0 +1,742 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>訂單查詢｜配貨 & 對帳</title>
+  <style>
+    :root{
+      --bg:#0b0c10;
+      --card:#12131a;
+      --muted:#a6a8b3;
+      --text:#f3f4f6;
+      --line:#242634;
+      --ok:#2dd4bf;
+      --warn:#fbbf24;
+      --bad:#fb7185;
+      --btn:#ffffff;
+      --btnText:#0b0c10;
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --radius: 18px;
+      --radius2: 14px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans TC", "PingFang TC", "Heiti TC", "Microsoft JhengHei", Arial, "Apple Color Emoji","Segoe UI Emoji";
+    }
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
+      font-family:var(--sans);
+      background: radial-gradient(1200px 600px at 20% -10%, rgba(45,212,191,.18), transparent 60%),
+                  radial-gradient(900px 500px at 90% 0%, rgba(251,113,133,.14), transparent 55%),
+                  var(--bg);
+      color:var(--text);
+    }
+    a{ color:inherit; }
+    .wrap{
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 22px 16px 70px;
+    }
+    .header{
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-end;
+      gap:12px;
+      margin-bottom: 14px;
+    }
+    .title{
+      line-height:1.15;
+    }
+    .title h1{
+      margin:0;
+      font-size: 24px;
+      letter-spacing: .2px;
+    }
+    .title p{
+      margin:6px 0 0;
+      color:var(--muted);
+      font-size: 13px;
+    }
+    .pill{
+      font-family:var(--mono);
+      font-size:12px;
+      color:rgba(255,255,255,.85);
+      background: rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.12);
+      padding: 8px 10px;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+
+    .panel{
+      background: rgba(18,19,26,.92);
+      border: 1px solid rgba(255,255,255,.10);
+      box-shadow: var(--shadow);
+      border-radius: var(--radius);
+      padding: 14px;
+      margin: 12px 0 16px;
+      backdrop-filter: blur(6px);
+    }
+    .row{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+    .input{
+      flex: 1;
+      min-width: 260px;
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,.14);
+      outline: none;
+      background: rgba(255,255,255,.06);
+      color: var(--text);
+      font-size: 15px;
+    }
+    .input::placeholder{ color: rgba(255,255,255,.45); }
+    #emailInput{ display:none; }
+    .btn{
+      padding: 12px 14px;
+      border: 0;
+      border-radius: 14px;
+      cursor: pointer;
+      background: var(--btn);
+      color: var(--btnText);
+      font-weight: 700;
+      letter-spacing:.2px;
+      min-width: 120px;
+    }
+    .btn:disabled{
+      opacity:.5;
+      cursor:not-allowed;
+    }
+    .hint{
+      margin-top:10px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+    .status{
+      margin-top: 10px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .fileBlock{
+      margin-top: 14px;
+      border-radius: var(--radius);
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.04);
+      overflow:hidden;
+    }
+    .fileHead{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+      padding: 12px 14px;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      background: rgba(255,255,255,.03);
+    }
+    .fileName{
+      font-weight: 800;
+      letter-spacing:.2px;
+    }
+    .fileMeta{
+      color: var(--muted);
+      font-size: 12px;
+      font-family: var(--mono);
+    }
+    .orders{
+      padding: 12px 14px 16px;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+    .orderCard{
+      border: 1px solid rgba(255,255,255,.10);
+      border-radius: var(--radius);
+      background: rgba(18,19,26,.80);
+      box-shadow: 0 10px 24px rgba(0,0,0,.25);
+      overflow:hidden;
+    }
+    .orderTop{
+      padding: 12px 14px;
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap:12px;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      background: rgba(255,255,255,.03);
+    }
+    .orderId{
+      font-family: var(--mono);
+      font-size: 12px;
+      color: rgba(255,255,255,.85);
+      margin:0 0 4px;
+    }
+    .buyer{
+      font-size: 16px;
+      font-weight: 900;
+      margin:0;
+    }
+    .badge{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 12px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.06);
+      white-space: nowrap;
+    }
+    .badge.ok{ border-color: rgba(45,212,191,.35); color: var(--ok); background: rgba(45,212,191,.10); }
+    .badge.warn{ border-color: rgba(251,191,36,.35); color: var(--warn); background: rgba(251,191,36,.10); }
+    .badge.bad{ border-color: rgba(251,113,133,.35); color: var(--bad); background: rgba(251,113,133,.10); }
+
+    .orderBody{
+      padding: 12px 14px 14px;
+    }
+    .kv{
+      display:grid;
+      grid-template-columns: 160px 1fr;
+      gap: 8px 12px;
+      padding: 10px 0;
+      border-bottom: 1px dashed rgba(255,255,255,.12);
+      font-size: 13px;
+    }
+    .kv:last-child{ border-bottom: 0; padding-bottom: 0; }
+    .k{ color: var(--muted); }
+    .v{ color: rgba(255,255,255,.92); }
+    .v.mono{ font-family: var(--mono); font-size: 12.5px; }
+
+    .sectionTitle{
+      margin: 14px 0 8px;
+      font-size: 13px;
+      color: rgba(255,255,255,.88);
+      font-weight: 800;
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
+    .table{
+      width:100%;
+      border-collapse: collapse;
+      overflow:hidden;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,.10);
+    }
+    .table th, .table td{
+      padding: 10px 10px;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      vertical-align: top;
+      font-size: 13px;
+    }
+    .table th{
+      text-align:left;
+      color: rgba(255,255,255,.80);
+      background: rgba(255,255,255,.04);
+      font-weight: 800;
+      font-size: 12px;
+      letter-spacing: .2px;
+    }
+    .table tr:last-child td{ border-bottom:0; }
+    .muted{ color: var(--muted); }
+    .empty{
+      padding: 10px 12px;
+      border: 1px dashed rgba(255,255,255,.16);
+      border-radius: 14px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .footerNote{
+      margin-top: 16px;
+      color: rgba(255,255,255,.55);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    @media (max-width: 540px){
+      .kv{ grid-template-columns: 120px 1fr; }
+      .btn{ width:100%; }
+      .input{ width:100%; }
+      .orderTop{ flex-direction: column; align-items:flex-start; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="header">
+      <div class="title">
+        <h1>訂單查詢｜配貨 & 對帳</h1>
+        <p>輸入 Email 後查詢：會到資料夾內每個訂單試算表的「編號配置 / 配貨 / 對帳表」抓取資料。</p>
+      </div>
+      <div class="pill">JSONP · Web App API</div>
+    </div>
+
+    <div class="panel">
+      <div class="row">
+        <input id="emailInput" class="input" type="email" placeholder="請輸入 Email（例如：name@gmail.com）" autocomplete="email" />
+        <button id="searchBtn" class="btn">查詢</button>
+      </div>
+      <div class="hint">
+        • 第一次使用需輸入 Email 做綁定；綁定後下次會用 LINE UID 自動查詢（不用再輸入 Email）<br/>
+        • 綁定資料寫入 <span class="muted">Users</span> 工作表（A Email / D LINE_UID）
+      </div>
+      <div id="status" class="status"></div>
+    </div>
+
+    <div id="results"></div>
+
+    <div class="footerNote">
+      注意：若資料量非常大（資料夾內試算表很多、每張表很多列），首次查詢可能較久。若遇到查不到，請先確認「編號配置」D 欄 Email 是否完全一致（大小寫不影響，但空白會影響）。
+    </div>
+  </div>
+
+  <script>
+    // ✅ 你的新部署 /exec
+    const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbyRYlpBD7-Vdnq1cvp_lDin3Tq_7L78X83vQTa7M3kXEX9g-PVhstIJcpO5RdCTtQMN/exec";
+
+    // ✅ 若要用 LINE UID 自動查詢：請把你的 LIFF ID 填在這裡（並用 LIFF 開啟此頁）
+    // 例如：const LIFF_ID = "165xxxxxxx-XXXXXXXX";
+    const LIFF_ID = "2008825521-dLeF3YrA";
+
+    // （測試用）也可在網址帶入 ?uid=Uxxxxxxxx 來模擬 CURRENT_UID
+    const urlParams = new URLSearchParams(location.search);
+    const UID_FROM_URL = (urlParams.get("uid") || "").trim();
+
+    let CURRENT_UID = UID_FROM_URL || "";
+
+    const $ = (id) => document.getElementById(id);
+
+    function setStatus(msg) {
+      $("status").textContent = msg || "";
+    }
+
+    function setEmailInputEnabled(enabled) {
+      const input = $("emailInput");
+      input.disabled = !enabled;
+      input.style.opacity = enabled ? "1" : "0.6";
+    }
+
+    function setEmailInputVisible(visible) {
+      const input = $("emailInput");
+      input.style.display = visible ? "" : "none";
+    }
+
+    // 初始：先隱藏 Email 輸入框；只有確認 UID 尚未綁定時才顯示
+    setEmailInputVisible(false);
+    setEmailInputEnabled(false);
+
+    function escapeHtml(s) {
+      return String(s ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function isValidEmail(email) {
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || "").trim());
+    }
+
+    function fmtMoney(v) {
+      if (v === "" || v === null || v === undefined) return "";
+      const n = Number(v);
+      return Number.isFinite(n) ? n.toLocaleString("en-US") : String(v);
+    }
+
+    function normalizeText(v) {
+      return String(v ?? "").trim();
+    }
+
+    function normalizeOrderId(v) {
+      return String(v ?? "").trim();
+    }
+
+    function statusBadge(payStatus) {
+      const s = normalizeText(payStatus);
+      const low = s.toLowerCase();
+      if (!s) return `<span class="badge warn">付款狀態：未填</span>`;
+      if (low.includes("已") || low.includes("完成") || low.includes("paid") || low.includes("ok")) {
+        return `<span class="badge ok">付款狀態：${escapeHtml(s)}</span>`;
+      }
+      if (low.includes("未") || low.includes("待") || low.includes("欠") || low.includes("pending")) {
+        return `<span class="badge warn">付款狀態：${escapeHtml(s)}</span>`;
+      }
+      return `<span class="badge warn">付款狀態：${escapeHtml(s)}</span>`;
+    }
+
+    /** JSONP call */
+    function jsonpCall(action, params = {}) {
+      return new Promise((resolve, reject) => {
+        const cb = "cb_" + Date.now() + "_" + Math.random().toString(16).slice(2);
+        params.action = action;
+        params.callback = cb;
+
+        const url = WEBAPP_URL + "?" + new URLSearchParams(params).toString();
+
+        const script = document.createElement("script");
+        const timer = setTimeout(() => {
+          cleanup();
+          reject(new Error("JSONP timeout"));
+        }, 20000);
+
+        function cleanup() {
+          clearTimeout(timer);
+          try { delete window[cb]; } catch (_) { window[cb] = undefined; }
+          if (script.parentNode) script.parentNode.removeChild(script);
+        }
+
+        window[cb] = (data) => { cleanup(); resolve(data); };
+        script.onerror = () => { cleanup(); reject(new Error("JSONP load error")); };
+        script.src = url;
+        document.body.appendChild(script);
+      });
+    }
+
+    /** Group API result -> by file -> by orderId */
+    function buildOrderIndex(apiRes) {
+      const fileBlocks = [];
+
+      for (const pack of (apiRes.results || [])) {
+        if (pack.error) {
+          fileBlocks.push({
+            fileName: pack.fileName || "（未命名）",
+            fileId: pack.fileId || "",
+            error: pack.error,
+            orders: []
+          });
+          continue;
+        }
+
+        const orderMap = new Map();
+        const orderIds = (pack.orderIds || []).map(normalizeOrderId).filter(Boolean);
+
+        // from mapping buyers array (same index as orderIds)
+        const buyers = (pack.buyers || []).map(normalizeText);
+
+        for (let i = 0; i < orderIds.length; i++) {
+          const oid = orderIds[i];
+          if (!orderMap.has(oid)) {
+            orderMap.set(oid, {
+              訂單編號: oid,
+              訂購人: buyers[i] || "",
+              對帳: null,
+              配貨: []
+            });
+          } else {
+            // if repeated oid, keep buyer if empty
+            const o = orderMap.get(oid);
+            if (!o.訂購人 && buyers[i]) o.訂購人 = buyers[i];
+          }
+        }
+
+        // attach 對帳 rows
+        const billRows = (pack["對帳表"] && pack["對帳表"].rows) ? pack["對帳表"].rows : [];
+        for (const r of billRows) {
+          const oid = normalizeOrderId(r["訂單編號"]);
+          if (!oid) continue;
+          if (!orderMap.has(oid)) {
+            orderMap.set(oid, { 訂單編號: oid, 訂購人: normalizeText(r["訂購人"]), 對帳: r, 配貨: [] });
+          } else {
+            const o = orderMap.get(oid);
+            if (!o.訂購人 && r["訂購人"]) o.訂購人 = normalizeText(r["訂購人"]);
+            // if multiple reconcile rows exist, keep the first non-empty, else overwrite
+            if (!o.對帳) o.對帳 = r;
+          }
+        }
+
+        // attach 配貨 rows
+        const shipRows = (pack["配貨"] && pack["配貨"].rows) ? pack["配貨"].rows : [];
+        for (const r of shipRows) {
+          const oid = normalizeOrderId(r["訂單編號"]);
+          if (!oid) continue;
+          if (!orderMap.has(oid)) {
+            orderMap.set(oid, { 訂單編號: oid, 訂購人: normalizeText(r["訂購人"]), 對帳: null, 配貨: [r] });
+          } else {
+            const o = orderMap.get(oid);
+            if (!o.訂購人 && r["訂購人"]) o.訂購人 = normalizeText(r["訂購人"]);
+            o.配貨.push(r);
+          }
+        }
+
+        const orders = Array.from(orderMap.values())
+          .sort((a,b) => a.訂單編號.localeCompare(b.訂單編號, "zh-Hant"));
+
+        fileBlocks.push({
+          fileName: pack.fileName || "（未命名）",
+          fileId: pack.fileId || "",
+          error: "",
+          orders
+        });
+      }
+
+      return fileBlocks;
+    }
+
+    function render(apiRes) {
+      const root = $("results");
+      root.innerHTML = "";
+
+      if (!apiRes || !apiRes.ok) {
+        root.innerHTML = `
+          <div class="panel" style="border-color: rgba(251,113,133,.35);">
+            <div style="font-weight:900;">❌ 查詢失敗</div>
+            <div class="status" style="color: rgba(251,113,133,.95); margin-top:6px;">
+              ${escapeHtml(apiRes?.error || "未知錯誤")}
+            </div>
+          </div>`;
+        return;
+      }
+
+      const fileBlocks = buildOrderIndex(apiRes);
+
+      if (!fileBlocks.length || fileBlocks.every(b => !b.orders.length && !b.error)) {
+        root.innerHTML = `
+          <div class="panel">
+            <div style="font-weight:900;">查不到資料</div>
+            <div class="status">已掃描 ${apiRes.scannedFiles} 份檔案，未找到符合的訂單編號。</div>
+          </div>`;
+        return;
+      }
+
+      for (const block of fileBlocks) {
+        const meta = block.fileId ? `（${escapeHtml(block.fileId.slice(0,8))}…）` : "";
+        const headHtml = `
+          <div class="fileHead">
+            <div class="fileName">📄 ${escapeHtml(block.fileName)}</div>
+            <div class="fileMeta">${block.orders.length} 筆訂單 ${meta}</div>
+          </div>`;
+
+        let bodyHtml = "";
+
+        if (block.error) {
+          bodyHtml = `
+            <div class="orders">
+              <div class="empty">⚠️ ${escapeHtml(block.error)}</div>
+            </div>`;
+        } else {
+          bodyHtml = `<div class="orders">
+            ${block.orders.map(renderOrderCard).join("")}
+          </div>`;
+        }
+
+        root.insertAdjacentHTML("beforeend", `
+          <div class="fileBlock">
+            ${headHtml}
+            ${bodyHtml}
+          </div>
+        `);
+      }
+    }
+
+    function renderOrderCard(o) {
+      const bill = o.對帳 || null;
+
+      const payStatus = bill ? bill["付款狀態"] : "";
+      const badge = statusBadge(payStatus);
+
+      const buyer = normalizeText(o.訂購人) || (bill ? normalizeText(bill["訂購人"]) : "") || "（未填訂購人）";
+
+      const billKv = bill ? `
+        <div class="kv">
+          <div class="k">購買總件數</div><div class="v">${escapeHtml(bill["購買總件數"] ?? "")}</div>
+          <div class="k">應收金額</div><div class="v mono">${escapeHtml(fmtMoney(bill["應收金額"]))}</div>
+          <div class="k">付款狀態</div><div class="v">${escapeHtml(bill["付款狀態"] ?? "")}</div>
+          <div class="k">付款日期</div><div class="v">${escapeHtml(bill["付款日期"] ?? "")}</div>
+          <div class="k">後五碼</div><div class="v mono">${escapeHtml(bill["後五碼"] ?? "")}</div>
+          <div class="k">收款金額</div><div class="v mono">${escapeHtml(fmtMoney(bill["收款金額"]))}</div>
+          <div class="k">備註</div><div class="v">${escapeHtml(bill["備註"] ?? "")}</div>
+        </div>
+      ` : `<div class="empty">沒有找到此訂單的「對帳表」資料。</div>`;
+
+      const shipRows = Array.isArray(o.配貨) ? o.配貨 : [];
+      const shipTable = shipRows.length ? `
+        <table class="table">
+          <thead>
+            <tr>
+              <th style="width:46%;">訂購商品</th>
+              <th style="width:12%;">登記</th>
+              <th style="width:12%;">配貨</th>
+              <th style="width:30%;">配貨結果</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${shipRows.map(r => `
+              <tr>
+                <td>${escapeHtml(r["訂購商品"] ?? "")}</td>
+                <td class="mono">${escapeHtml(r["登記數量"] ?? "")}</td>
+                <td class="mono">${escapeHtml(r["配貨數量"] ?? "")}</td>
+                <td>${escapeHtml(r["配貨結果"] ?? "")}</td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      ` : `<div class="empty">沒有找到此訂單的「配貨」資料。</div>`;
+
+      return `
+        <div class="orderCard">
+          <div class="orderTop">
+            <div>
+              <p class="orderId">訂單編號：${escapeHtml(o.訂單編號)}</p>
+              <p class="buyer">${escapeHtml(buyer)}</p>
+            </div>
+            <div>${badge}</div>
+          </div>
+
+          <div class="orderBody">
+            <div class="sectionTitle">🧾 對帳資料</div>
+            ${billKv}
+
+            <div class="sectionTitle">📦 配貨明細</div>
+            ${shipTable}
+          </div>
+        </div>
+      `;
+    }
+
+    async function doSearch() {
+      const email = String($("emailInput").value || "").trim();
+
+      $("searchBtn").disabled = true;
+      setStatus("查詢中…（正在掃描資料夾內試算表）");
+
+      try {
+        let res = null;
+
+        // 1) 有 LINE UID → 優先用 UID 自動查（不用 email）
+        if (CURRENT_UID) {
+          setEmailInputEnabled(false);
+          res = await jsonpCall("searchByUid", { uid: CURRENT_UID });
+
+          if (res && res.ok) {
+            setStatus(`查詢完成：掃描 ${res.scannedFiles} 份檔案，找到 ${res.matchedFiles} 份有資料。`);
+            render(res);
+            // 已綁定成功後，email 可隱藏（想保留也可以改成 true）
+            setEmailInputVisible(false);
+            return;
+          }
+
+          // UID 有，但尚未綁定 email
+          // 若使用者已輸入 Email（格式正確）→ 直接綁定並再查一次
+          if (isValidEmail(email)) {
+            setEmailInputVisible(true);
+            setEmailInputEnabled(false);
+            setStatus("綁定中…");
+
+            await jsonpCall("saveEmail", { email, uid: CURRENT_UID });
+            const res2 = await jsonpCall("searchByUid", { uid: CURRENT_UID });
+
+            if (res2 && res2.ok) {
+              setStatus(`查詢完成：掃描 ${res2.scannedFiles} 份檔案，找到 ${res2.matchedFiles} 份有資料。`);
+              render(res2);
+              setEmailInputVisible(false);
+              return;
+            }
+
+            // 綁定後仍查不到（可能 email 不在任何訂單）
+            setEmailInputVisible(true);
+            setEmailInputEnabled(true);
+            setStatus(res2?.error || "綁定完成但查不到訂單資料，請確認 Email 是否為下單時填寫的 Email。");
+            $("emailInput").focus();
+            return;
+          }
+
+          // 尚未輸入 Email 或格式不正確 → 顯示輸入框提示綁定
+          setEmailInputVisible(true);
+          setEmailInputEnabled(true);
+          setStatus(res?.error || "此帳號尚未綁定 Email，請輸入 Email 進行綁定後再查詢。");
+          $("emailInput").focus();
+          return;
+        }
+
+        // 2) 沒有 UID → 走手動 email 查
+        setEmailInputVisible(true);
+        setEmailInputEnabled(true);
+        if (!isValidEmail(email)) {
+          setStatus("請輸入正確的 Email 格式。");
+          $("emailInput").focus();
+          return;
+        }
+
+        res = await jsonpCall("search", { email });
+        setStatus(res && res.ok
+          ? `查詢完成：掃描 ${res.scannedFiles} 份檔案，找到 ${res.matchedFiles} 份有資料。`
+          : `查詢失敗：${res?.error || "未知錯誤"}`
+        );
+        render(res);
+
+      } catch (err) {
+        setStatus("查詢失敗（連線或部署權限問題）：" + (err?.message || err));
+        render({ ok:false, error: String(err?.message || err) });
+      } finally {
+        $("searchBtn").disabled = false;
+      }
+    }
+
+
+    // events
+    $("searchBtn").addEventListener("click", doSearch);
+    $("emailInput").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") doSearch();
+    });
+
+    (async () => {
+      try {
+        const ping = await jsonpCall("ping", {});
+        if (ping && ping.ok) setStatus("API 已連線 ✅");
+
+        // 若有 LIFF_ID，就動態載入 LIFF SDK 並嘗試取得 userId
+        if (LIFF_ID) {
+          await new Promise((resolve, reject) => {
+            const s = document.createElement("script");
+            s.src = "https://static.line-scdn.net/liff/edge/2/sdk.js";
+            s.onload = resolve;
+            s.onerror = reject;
+            document.head.appendChild(s);
+          });
+
+          await liff.init({ liffId: LIFF_ID });
+          if (!liff.isLoggedIn()) {
+            setStatus("需要登入 LINE 才能自動查詢…");
+            liff.login();
+            return;
+          }
+          const profile = await liff.getProfile();
+          CURRENT_UID = (profile.userId || "").trim();
+        }
+
+        // 有 UID（LIFF 或 URL 參數）就自動查
+        if (CURRENT_UID) {
+          setEmailInputEnabled(false);
+          const res = await jsonpCall("searchByUid", { uid: CURRENT_UID });
+          if (res && res.ok) {
+            setStatus(`自動查詢完成：掃描 ${res.scannedFiles} 份檔案，找到 ${res.matchedFiles} 份有資料。`);
+            render(res);
+            setEmailInputVisible(false);
+          } else {
+            // 尚未綁定 → 顯示 email 輸入
+            setEmailInputVisible(true);
+            setEmailInputEnabled(true);
+            setStatus(res?.error || "此帳號尚未綁定 Email，請輸入 Email 進行綁定。\n（綁定後下次就不用再輸入）");
+          }
+        } else {
+          setEmailInputVisible(true);
+          setEmailInputEnabled(true);
+          setStatus("請輸入 Email 查詢（或用 LIFF 開啟以使用 UID 自動查詢）");
+        }
+
+      } catch {
+        setStatus("API 連線測試失敗 ⚠️ 請確認 Web App 部署權限為『任何人』");
+        setEmailInputVisible(true);
+        setEmailInputEnabled(true);
+      }
+    })();
+  </script>
+</body>
+</html>
