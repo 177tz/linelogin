@@ -129,12 +129,6 @@
       cursor:not-allowed;
     }
 
-    .hint{
-      margin-top:10px;
-      color: var(--muted);
-      font-size: 13px;
-      line-height: 1.5;
-    }
 
     .status{
       margin-top: 10px;
@@ -356,19 +350,11 @@
         <input id="emailInput" class="input" type="email" placeholder="請輸入下單時的 Email（首次綁定用）" autocomplete="email" />
         <button id="searchBtn" class="btn">查詢</button>
       </div>
-      <div class="hint">
-        • 已綁定者：開啟頁面後會自動查詢並顯示結果<br/>
-        • 未綁定者：請輸入「下單 Email」完成綁定後即可查詢<br/>
-        • 綁定資料會寫入 Users（Email / LINE_UID）僅用於本查詢功能
-      </div>
       <div id="status" class="status"></div>
     </div>
 
     <div id="results"></div>
 
-    <div class="footerNote">
-      注意：若資料量非常大（資料夾內試算表很多、每張表很多列），首次查詢可能較久。若遇到查不到，請先確認「編號配置」D 欄 Email 是否完全一致（大小寫不影響，但空白會影響）。
-    </div>
   </div>
 
   <script>
@@ -514,8 +500,8 @@ setSearchButtonLabel("search");
       for (const pack of (apiRes.results || [])) {
         if (pack.error) {
           fileBlocks.push({
-            fileName: pack.fileName || "（未命名）",
-            fileId: pack.fileId || "",
+            fileName: "",
+            fileId: "",
             error: pack.error,
             orders: []
           });
@@ -577,8 +563,8 @@ setSearchButtonLabel("search");
           .sort((a,b) => a.訂單編號.localeCompare(b.訂單編號, "zh-Hant"));
 
         fileBlocks.push({
-          fileName: pack.fileName || "（未命名）",
-          fileId: pack.fileId || "",
+          fileName: "",
+          fileId: "",
           error: "",
           orders
         });
@@ -614,11 +600,10 @@ setSearchButtonLabel("search");
       }
 
       for (const block of fileBlocks) {
-        const meta = block.fileId ? `（${escapeHtml(block.fileId.slice(0,8))}…）` : "";
         const headHtml = `
           <div class="fileHead">
-            <div class="fileName">📄 ${escapeHtml(block.fileName)}</div>
-            <div class="fileMeta">${block.orders.length} 筆訂單 ${meta}</div>
+            <div class="fileName">訂單資料</div>
+            <div class="fileMeta">${block.orders.length} 筆</div>
           </div>`;
 
         let bodyHtml = "";
