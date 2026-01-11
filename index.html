@@ -93,7 +93,7 @@
 
   <script>
     // ====== 設定 ======
-    const MY_LIFF_ID = "你的LIFF_ID_填在這裡"; // 必填：部署到 LINE 後請換成你的 LIFF ID
+    const MY_LIFF_ID = "2008825521-dLeF3YrA"; // 必填：部署到 LINE 後請換成你的 LIFF ID
 
     let userUid = "";
 
@@ -234,7 +234,7 @@
     }
 
     function openLineIfNeeded(){
-      try{ if(2008825521-dLeF3YrA && liff && liff.isInClient()) liff.closeWindow(); }catch(e){}
+      try{ if(MY_LIFF_ID && liff && liff.isInClient()) liff.closeWindow(); }catch(e){}
     }
 
     function escapeHtml(str){
