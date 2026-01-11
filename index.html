@@ -1,50 +1,130 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-  <base target="_top">
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
-  <title>訂單查詢系統</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
+  <title>訂單整理</title>
 
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <!-- LIFF SDK -->
   <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 
   <style>
-    :root{ --card-shadow: 0 10px 28px rgba(0,0,0,.08); }
-    body{ background: radial-gradient(1000px 600px at 20% -10%, rgba(13,110,253,.18), transparent 60%),
-                  radial-gradient(900px 500px at 100% 0%, rgba(32,201,151,.16), transparent 55%),
-                  #0b0f14;
-          color:#e9eef5; }
-    .wrap{ max-width: 620px; }
-    .glass{ background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12); box-shadow: var(--card-shadow);
-            backdrop-filter: blur(10px); border-radius: 18px; }
-    .muted{ color: rgba(233,238,245,.72); }
-    .chip{ display:inline-flex; align-items:center; gap:.4rem; padding:.35rem .6rem; border-radius:999px;
-           background: rgba(255,255,255,.10); border: 1px solid rgba(255,255,255,.12); }
+    :root{
+      --bg0:#0b0f14;
+      --glass: rgba(255,255,255,.08);
+      --glass2: rgba(255,255,255,.06);
+      --line: rgba(255,255,255,.12);
+      --muted: rgba(233,238,245,.72);
+      --shadow: 0 10px 28px rgba(0,0,0,.10);
+    }
+    body{
+      background:
+        radial-gradient(1000px 600px at 20% -10%, rgba(13,110,253,.18), transparent 60%),
+        radial-gradient(900px 500px at 100% 0%, rgba(32,201,151,.16), transparent 55%),
+        var(--bg0);
+      color:#e9eef5;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    .wrap{ max-width: 640px; }
+    .glass{
+      background: var(--glass);
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+      border-radius: 18px;
+    }
+    .muted{ color: var(--muted); }
+    .chip{
+      display:inline-flex; align-items:center; gap:.45rem;
+      padding:.35rem .65rem; border-radius:999px;
+      background: rgba(255,255,255,.10);
+      border: 1px solid var(--line);
+    }
     .hidden{ display:none !important; }
-    a{ word-break: break-all; }
-    .btn-primary{ box-shadow: 0 10px 22px rgba(13,110,253,.25); }
-    .form-control{ background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.14); color:#fff; }
+
+    .form-control{
+      background: rgba(255,255,255,.08);
+      border-color: rgba(255,255,255,.14);
+      color:#fff;
+    }
     .form-control::placeholder{ color: rgba(233,238,245,.55); }
-    .form-control:focus{ background: rgba(255,255,255,.10); border-color: rgba(13,110,253,.55); box-shadow: 0 0 0 .25rem rgba(13,110,253,.18); color:#fff; }
-    .list-group-item{ background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.12); color:#e9eef5; }
+    .form-control:focus{
+      background: rgba(255,255,255,.10);
+      border-color: rgba(13,110,253,.55);
+      box-shadow: 0 0 0 .25rem rgba(13,110,253,.18);
+      color:#fff;
+    }
+    .btn-primary{ box-shadow: 0 10px 22px rgba(13,110,253,.25); }
+
+    .list-group-item{
+      background: var(--glass2);
+      border-color: var(--line);
+      color:#e9eef5;
+    }
+    .list-group-item:hover{ background: rgba(255,255,255,.08); }
+    .accordion-item{
+      background: rgba(255,255,255,.06);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      overflow: hidden;
+      margin-bottom: 10px;
+    }
+    .accordion-button{
+      background: rgba(255,255,255,.06);
+      color:#e9eef5;
+    }
+    .accordion-button:not(.collapsed){
+      background: rgba(255,255,255,.10);
+      color:#e9eef5;
+      box-shadow: none;
+    }
+    .accordion-button:focus{
+      box-shadow: 0 0 0 .25rem rgba(13,110,253,.18);
+    }
+    .store-card{
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 14px;
+      padding: 14px;
+    }
+    .store-actions{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-top:10px;
+    }
+
+    a{ word-break: break-all; }
+    .badge-soft{
+      background: rgba(255,255,255,.14);
+      border: 1px solid rgba(255,255,255,.14);
+      color:#e9eef5;
+      font-weight: 600;
+    }
+
+    .small-note{ font-size:.9rem; }
   </style>
 </head>
 
 <body>
   <div class="container wrap py-4">
+    <!-- Header -->
     <div class="d-flex justify-content-between align-items-center mb-3">
       <div>
         <div class="fw-semibold" style="letter-spacing:.08em;">訂單整理</div>
         <div class="muted" style="font-size:.95rem;">賣場資訊查詢</div>
       </div>
+
       <div class="chip" id="statusChip">
         <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
         <span class="muted" id="statusText">自動查詢中…</span>
       </div>
     </div>
 
-    <!-- 未綁定：註冊卡 -->
+    <!-- Register Card -->
     <div id="registerCard" class="glass p-4 hidden">
       <div class="mb-2 fw-semibold">首次使用</div>
       <div class="muted mb-4">請輸入 Email 與群內名稱完成綁定</div>
@@ -53,188 +133,86 @@
         <label class="form-label">Email</label>
         <input id="emailInput" type="email" class="form-control" placeholder="name@example.com" autocomplete="email">
       </div>
+
       <div class="mb-3">
         <label class="form-label">群內名稱</label>
         <input id="nameInput" type="text" class="form-control" placeholder="你在群裡的名字" autocomplete="name">
       </div>
 
       <div class="d-grid gap-2">
-        <button class="btn btn-primary" onclick="submitRegister()">完成綁定並查詢</button>
-        <button class="btn btn-outline-light" onclick="openLineIfNeeded()">回到 LINE</button>
+        <button id="registerBtn" class="btn btn-primary" onclick="submitRegister()">完成綁定並查詢</button>
       </div>
-      <div class="mt-3 muted" style="font-size:.9rem;">※ 僅用於識別與查詢賣場資訊</div>
+
+      <div class="mt-3 muted small-note">※ 綁定後無法自行更換資料，如需修改請聯繫管理員</div>
     </div>
 
-    <!-- 已綁定：結果卡 -->
+    <!-- Result Card -->
     <div id="resultCard" class="glass p-4 hidden">
       <div class="d-flex flex-wrap gap-2 align-items-center mb-3">
         <div class="fw-semibold" id="userName"></div>
         <div class="chip"><span class="muted" id="userMail"></span></div>
       </div>
 
-      <div id="emptyHint" class="alert alert-warning mb-3 hidden" role="alert" style="background: rgba(255,193,7,.14); border-color: rgba(255,193,7,.25); color:#ffe8a6;">
-        找不到對應的賣場資訊
+      <div id="emptyHint" class="alert mb-3 hidden" role="alert"
+           style="background: rgba(255,193,7,.14); border: 1px solid rgba(255,193,7,.25); color:#ffe8a6;">
+  <div class="fw-semibold mb-1">找不到對應的賣場資訊</div>
+  <div class="muted mb-2" style="color:#ffe8a6; opacity:.9;">請確認「群內名稱」是否與賣場名稱一致；若仍無資料，請聯繫官方。</div>
+  <a class="btn btn-sm btn-outline-light" href="https://ormkub.pse.is/LINEOA527" target="_blank" rel="noopener noreferrer">聯繫官方 LINE</a>
+</div>
+
+      <div id="stores" class="accordion"></div>
+
+      <div class="mt-4 muted small-note">
+        若顯示內容不完整，請確認群內名稱是否與賣場名稱一致。
       </div>
-
-      <div id="stores" class="list-group"></div>
-
-      
     </div>
 
-    <!-- 錯誤卡 -->
+    <!-- Error Card -->
     <div id="errorCard" class="glass p-4 hidden">
       <div class="fw-semibold mb-2">發生錯誤</div>
       <div class="muted" id="errorText"></div>
+
       <div class="d-grid gap-2 mt-4">
         <button class="btn btn-outline-light" onclick="location.reload()">重新整理</button>
       </div>
     </div>
+
+    <!-- Footer -->
+    <div class="mt-4 text-center muted small-note">
+      powered by Ormkub
+    </div>
   </div>
 
   <script>
-    // ====== 設定 ======
-    const MY_LIFF_ID = "2008825521-dLeF3YrA"; // 必填：部署到 LINE 後請換成你的 LIFF ID
+    // =========================
+    // ✅ 你只要改這兩個
+    // =========================
+    const MY_LIFF_ID = "2008825521-dLeF3YrA";
+    const SCRIPT_API_URL = "https://script.google.com/macros/s/AKfycbyqKDuD7JIlE7wl5xmBh2ODCsdALUowUBWbwW6wjoKyuDr0r1gItpzeabL6NwwrUVgeAg/exec";
 
+    // =========================
     let userUid = "";
 
-    // ====== UI helper ======
     function setStatus(text, loading=true){
       document.getElementById('statusText').innerText = text;
       const spinner = document.querySelector('#statusChip .spinner-border');
       spinner.classList.toggle('hidden', !loading);
+      document.getElementById('statusChip').classList.remove('hidden');
+    }
+
+    function hideStatus(){
+      document.getElementById('statusChip').classList.add('hidden');
     }
 
     function showOnly(id){
-      ['registerCard','resultCard','errorCard'].forEach(x=>document.getElementById(x).classList.add('hidden'));
+      ['registerCard','resultCard','errorCard'].forEach(x => document.getElementById(x).classList.add('hidden'));
       document.getElementById(id).classList.remove('hidden');
     }
 
     function showError(msg){
-      setStatus('');
-      document.getElementById('statusChip').classList.add('hidden');
+      hideStatus();
       document.getElementById('errorText').innerText = msg;
       showOnly('errorCard');
-    }
-
-    // ====== LIFF init ======
-    window.onload = () => init();
-
-    async function init(){
-      try{
-        setStatus('自動查詢中…', true);
-
-        if(!MY_LIFF_ID){
-          // 電腦測試模式（略過 LIFF）
-          setStatus('測試模式：請手動填寫', false);
-          document.getElementById('statusChip').classList.add('hidden');
-          showOnly('registerCard');
-          return;
-        }
-
-        await liff.init({ liffId: MY_LIFF_ID });
-
-        if(!liff.isLoggedIn()){
-          liff.login();
-          return;
-        }
-
-        const profile = await liff.getProfile();
-        userUid = profile.userId;
-
-        google.script.run
-          .withSuccessHandler(handleInit)
-          .withFailureHandler(err => showError('初始化失敗：' + (err && err.message ? err.message : err)))
-          .initByUid(userUid);
-
-      }catch(e){
-        showError('LIFF 啟動失敗：' + (e && e.message ? e.message : e));
-      }
-    }
-
-    function handleInit(payload){
-      document.getElementById('statusChip').classList.add('hidden');
-
-      if(!payload || !payload.user){
-        showOnly('registerCard');
-        return;
-      }
-      renderResult(payload.user, payload.stores || []);
-    }
-
-    function renderResult(user, stores){
-      document.getElementById('userName').innerText = user.name || '';
-      document.getElementById('userMail').innerText = user.mail || '';
-
-      const list = document.getElementById('stores');
-      list.innerHTML = '';
-
-      if(!stores || stores.length === 0){
-        document.getElementById('emptyHint').classList.remove('hidden');
-      }else{
-        document.getElementById('emptyHint').classList.add('hidden');
-        stores.forEach(item => {
-          const a = document.createElement('a');
-          a.className = 'list-group-item list-group-item-action';
-          a.href = (item.link || '#');
-          a.target = '_blank';
-
-          const title = document.createElement('div');
-          title.className = 'd-flex justify-content-between align-items-start gap-2';
-          title.innerHTML = `
-            <div class="fw-semibold">${escapeHtml(item.sheet || '賣場')}</div>
-            <span class="badge text-bg-light">開啟</span>
-          `;
-
-          const desc = document.createElement('div');
-          desc.className = 'muted mt-1';
-          desc.style.fontSize = '.95rem';
-          desc.innerText = (item.desc || '').toString();
-
-          const link = document.createElement('div');
-          link.className = 'mt-2';
-          link.style.fontSize = '.9rem';
-          link.innerHTML = `<span class="muted">連結：</span> <span>${escapeHtml((item.link || '').toString())}</span>`;
-
-          a.appendChild(title);
-          if(item.desc) a.appendChild(desc);
-          if(item.link) a.appendChild(link);
-          list.appendChild(a);
-        });
-      }
-
-      showOnly('resultCard');
-    }
-
-    function submitRegister(){
-      const mail = document.getElementById('emailInput').value.trim();
-      const name = document.getElementById('nameInput').value.trim();
-      if(!mail){ alert('請輸入 Email'); return; }
-      if(!name){ alert('請輸入群內名稱'); return; }
-
-      setStatus('綁定中…', true);
-      document.getElementById('statusChip').classList.remove('hidden');
-
-      const uid = userUid || 'TEST_UID';
-
-      google.script.run
-        .withSuccessHandler(payload => {
-          document.getElementById('statusChip').classList.add('hidden');
-          renderResult(payload.user, payload.stores || []);
-        })
-        .withFailureHandler(err => {
-          showError('綁定失敗：' + (err && err.message ? err.message : err));
-        })
-        .registerAndFetch(mail, name, uid);
-    }
-
-    function resetBinding(){
-      document.getElementById('emailInput').value = '';
-      document.getElementById('nameInput').value = '';
-      showOnly('registerCard');
-    }
-
-    function openLineIfNeeded(){
-      try{ if(MY_LIFF_ID && liff && liff.isInClient()) liff.closeWindow(); }catch(e){}
     }
 
     function escapeHtml(str){
@@ -245,6 +223,218 @@
         .replaceAll('"','&quot;')
         .replaceAll("'",'&#039;');
     }
+    function isValidEmail(email){
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((email || "").trim());
+    }
+
+    function setRegisterBtnDisabled(disabled){
+      const btn = document.getElementById('registerBtn');
+      if (!btn) return;
+      btn.disabled = !!disabled;
+      btn.innerText = disabled ? "處理中…" : "完成綁定並查詢";
+    }
+
+    async function copyToClipboard(text){
+      try{
+        await navigator.clipboard.writeText(text);
+        alert("已複製連結");
+      }catch(e){
+        // fallback
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+        alert("已複製連結");
+      }
+    }
+
+    async function apiCall(action, payload){
+      if (!SCRIPT_API_URL || SCRIPT_API_URL.includes("請貼上")) {
+        throw new Error("SCRIPT_API_URL 尚未設定");
+      }
+
+      const res = await fetch(SCRIPT_API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action, ...payload })
+      });
+
+      // 有時 Apps Script 回傳不是 JSON（部署權限/錯誤），先保底
+      const text = await res.text();
+      let json;
+      try { json = JSON.parse(text); }
+      catch(e) { throw new Error("API 回傳非 JSON，請確認 Web App 權限為『任何人』。"); }
+
+      if (!json.ok) throw new Error(json.error || "API error");
+      return json.data;
+    }
+
+    // =========================
+    // LIFF init
+    // =========================
+    window.onload = () => init();
+
+    async function init(){
+      try{
+        setStatus("自動查詢中…", true);
+
+        await liff.init({ liffId: MY_LIFF_ID });
+
+        if (!liff.isLoggedIn()){
+          liff.login();
+          return;
+        }
+
+        const profile = await liff.getProfile();
+        userUid = profile.userId;
+
+        const data = await apiCall("initByUid", { lineUid: userUid });
+
+        hideStatus();
+
+        if (!data || !data.user){
+          showOnly("registerCard");
+          return;
+        }
+
+        renderResult(data.user, data.stores || []);
+
+      } catch(e){
+        showError("LIFF 啟動失敗：" + (e && e.message ? e.message : e));
+      }
+    }
+
+    // =========================
+    // Render
+    // =========================
+    function renderResult(user, stores){
+      document.getElementById('userName').innerText = user.name || '';
+      document.getElementById('userMail').innerText = user.mail || '';
+
+      const wrap = document.getElementById('stores');
+      wrap.innerHTML = '';
+
+      if (!stores || stores.length === 0){
+        document.getElementById('emptyHint').classList.remove('hidden');
+        showOnly('resultCard');
+        return;
+      }
+
+      document.getElementById('emptyHint').classList.add('hidden');
+
+      // group by sheet
+      const groups = {};
+      stores.forEach(s => {
+        const key = (s.sheet || '賣場').toString();
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(s);
+      });
+
+      const sheetNames = Object.keys(groups);
+
+      sheetNames.forEach((sheetName, idx) => {
+        const items = groups[sheetName];
+
+        const itemId = `acc_${idx}`;
+        const headingId = `heading_${idx}`;
+        const collapseId = `collapse_${idx}`;
+
+        const accItem = document.createElement('div');
+        accItem.className = 'accordion-item';
+
+        accItem.innerHTML = `
+          <h2 class="accordion-header" id="${headingId}">
+            <button class="accordion-button ${idx === 0 ? '' : 'collapsed'}" type="button"
+              data-bs-toggle="collapse" data-bs-target="#${collapseId}"
+              aria-expanded="${idx === 0 ? 'true' : 'false'}" aria-controls="${collapseId}">
+              <div class="d-flex align-items-center gap-2">
+                <div class="fw-semibold">${escapeHtml(sheetName)}</div>
+                <span class="badge badge-soft">${items.length}</span>
+              </div>
+            </button>
+          </h2>
+          <div id="${collapseId}" class="accordion-collapse collapse ${idx === 0 ? 'show' : ''}" aria-labelledby="${headingId}">
+            <div class="accordion-body" id="${itemId}"></div>
+          </div>
+        `;
+
+        wrap.appendChild(accItem);
+
+        const body = accItem.querySelector(`#${itemId}`);
+
+        items.forEach((it) => {
+          const link = (it.link || '').toString();
+          const desc = (it.desc || '').toString();
+
+          const card = document.createElement('div');
+          card.className = 'store-card mb-2';
+
+          const safeLink = escapeHtml(link);
+          const safeDesc = escapeHtml(desc);
+
+          card.innerHTML = `
+            ${desc ? `<div class="muted" style="font-size:.95rem; white-space:pre-wrap;">${safeDesc}</div>` : `<div class="muted" style="font-size:.95rem;">（無描述）</div>`}
+            ${link ? `
+              <div class="store-actions">
+                <a class="btn btn-sm btn-primary" href="${safeLink}" target="_blank" rel="noopener noreferrer">開啟賣場</a>
+                <button class="btn btn-sm btn-outline-light" type="button">複製連結</button>
+              </div>
+              <div class="mt-2 muted" style="font-size:.85rem;">${safeLink}</div>
+            ` : `
+              <div class="store-actions">
+                <a class="btn btn-sm btn-outline-light" href="https://ormkub.pse.is/LINEOA527" target="_blank" rel="noopener noreferrer">聯繫官方 LINE</a>
+              </div>
+            `}
+          `;
+
+          body.appendChild(card);
+
+          if (link) {
+            const copyBtn = card.querySelector('button');
+            copyBtn.addEventListener('click', () => copyToClipboard(link));
+          }
+        });
+      });
+
+      showOnly('resultCard');
+    }
+
+    // =========================
+    // Register
+    // =========================
+    async function submitRegister(){
+      const mail = document.getElementById('emailInput').value.trim();
+      const nameRaw = document.getElementById('nameInput').value.trim();
+
+      // normalize name spaces
+      const name = nameRaw.replace(/\s+/g, ' ');
+
+      if (!mail){ alert('請輸入 Email'); return; }
+      if (!isValidEmail(mail)){ alert('Email 格式不正確'); return; }
+      if (!name){ alert('請輸入群內名稱'); return; }
+      if (name.length > 40){ alert('群內名稱太長，請縮短後再試'); return; }
+
+      try{
+        setRegisterBtnDisabled(true);
+        setStatus("綁定中…", true);
+
+        const uid = userUid;
+        if (!uid) throw new Error("無法取得 LINE UID，請在 LINE 內開啟此頁");
+
+        const data = await apiCall("registerAndFetch", { mail, name, lineUid: uid });
+
+        hideStatus();
+        setRegisterBtnDisabled(false);
+        renderResult(data.user, data.stores || []);
+
+      } catch(e){
+        setRegisterBtnDisabled(false);
+        showError("綁定失敗：" + (e && e.message ? e.message : e));
+      }
+    }
   </script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
