@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LIFF 測試</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            padding: 20px; 
+            background: #f5f5f5;
+        }
+        .log { 
+            background: white; 
+            padding: 15px; 
+            margin: 10px 0; 
+            border-radius: 8px;
+            border-left: 4px solid #3498db;
+        }
+        .error { border-left-color: #e74c3c; }
+        .success { border-left-color: #27ae60; }
+        pre { 
+            background: #2c3e50; 
+            color: #ecf0f1; 
+            padding: 10px; 
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 LIFF 初始化測試</h1>
+    <div id="logs"></div>
+
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <script>
+        const LIFF_ID = '2008947743-8h9hmMMW';
+        const logs = document.getElementById('logs');
+
+        function addLog(message, type = 'log') {
+            const div = document.createElement('div');
+            div.className = `log ${type}`;
+            div.innerHTML = `<strong>${new Date().toLocaleTimeString()}</strong><br>${message}`;
+            logs.appendChild(div);
+            console.log(message);
+        }
+
+        async function testLIFF() {
+            addLog('🔧 開始測試 LIFF...', 'log');
+            addLog(`📱 LIFF ID: ${LIFF_ID}`, 'log');
+            addLog(`🌐 當前網址: ${window.location.href}`, 'log');
+
+            try {
+                // 測試 1: 檢查 LIFF SDK 是否載入
+                if (typeof liff === 'undefined') {
+                    throw new Error('LIFF SDK 未載入');
+                }
+                addLog('✅ LIFF SDK 已載入', 'success');
+
+                // 測試 2: 初始化 LIFF
+                addLog('⏳ 正在初始化 LIFF...', 'log');
+                await liff.init({ liffId: LIFF_ID });
+                addLog('✅ LIFF 初始化成功！', 'success');
+
+                // 測試 3: 檢查環境
+                const isInClient = liff.isInClient();
+                addLog(`📍 執行環境: ${isInClient ? 'LINE App 內' : '外部瀏覽器'}`, 'log');
+
+                // 測試 4: 檢查登入狀態
+                const isLoggedIn = liff.isLoggedIn();
+                addLog(`🔐 登入狀態: ${isLoggedIn ? '已登入' : '未登入'}`, 'log');
+
+                if (isLoggedIn) {
+                    // 測試 5: 取得使用者資料
+                    const profile = await liff.getProfile();
+                    addLog('✅ 使用者資料:', 'success');
+                    addLog(`<pre>${JSON.stringify({
+                        userId: profile.userId,
+                        displayName: profile.displayName,
+                        pictureUrl: profile.pictureUrl,
+                        statusMessage: profile.statusMessage
+                    }, null, 2)}</pre>`, 'success');
+                } else {
+                    addLog('⚠️ 未登入，3秒後將跳轉至登入頁面...', 'log');
+                    setTimeout(() => {
+                        liff.login();
+                    }, 3000);
+                }
+
+            } catch (error) {
+                addLog('❌ LIFF 初始化失敗', 'error');
+                addLog(`<strong>錯誤名稱:</strong> ${error.name}`, 'error');
+                addLog(`<strong>錯誤訊息:</strong> ${error.message}`, 'error');
+                addLog(`<pre>${JSON.stringify(error, Object.getOwnPropertyNames(error), 2)}</pre>`, 'error');
+
+                // 常見錯誤判斷
+                if (error.message.includes('400')) {
+                    addLog('💡 可能原因：LIFF ID 錯誤或不存在', 'error');
+                    addLog('請到 LINE Developers Console 確認 LIFF ID', 'error');
+                } else if (error.message.includes('403')) {
+                    addLog('💡 可能原因：Endpoint URL 設定錯誤', 'error');
+                    addLog(`請確認 LIFF Endpoint URL 是否為: ${window.location.origin + window.location.pathname}`, 'error');
+                } else if (error.message.includes('liffId')) {
+                    addLog('💡 可能原因：LIFF ID 格式錯誤', 'error');
+                }
+            }
+        }
+
+        // 啟動測試
+        window.addEventListener('load', () => {
+            addLog('📄 頁面已載入', 'log');
+            setTimeout(testLIFF, 500);
+        });
+    </script>
+</body>
+</html>
