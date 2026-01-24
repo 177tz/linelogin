@@ -385,9 +385,12 @@
                     markets.forEach((m, index) => {
                         html += `
                             <div style="background:#f8f9fa;padding:15px;margin:10px 0;border-radius:8px;border-left:4px solid #3498db;">
-                                <strong>${index + 1}. ${m.title || '未命名賣場'}</strong><br>
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                                    <strong style="font-size:16px;">${m.sheetName}</strong>
+                                    <span style="background:#3498db;color:white;padding:3px 10px;border-radius:12px;font-size:12px;">${m.groupName}</span>
+                                </div>
                                 <small style="color:#666;">${m.desc || '無描述'}</small><br>
-                                <a href="${m.link}" target="_blank" style="color:#3498db; text-decoration:none;">🔗 ${m.link}</a>
+                                <a href="${m.link}" target="_blank" style="color:#3498db; text-decoration:none; font-size:14px; margin-top:8px; display:inline-block;">🔗 點此前往下單</a>
                             </div>
                         `;
                     });
