@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>完整系統測試</title>
     <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body { 
             font-family: 'Segoe UI', Arial, sans-serif; 
             padding: 20px; 
@@ -28,6 +29,7 @@
             border-radius: 6px;
             border-left: 4px solid #3498db;
             font-size: 14px;
+            word-wrap: break-word;
         }
         .error { 
             background: #fee; 
@@ -48,6 +50,7 @@
             border-radius: 4px;
             overflow-x: auto;
             font-size: 12px;
+            max-height: 300px;
         }
         h1 {
             color: #2c3e50;
@@ -72,6 +75,7 @@
             font-size: 16px;
             margin: 5px;
             transition: all 0.3s;
+            display: inline-block;
         }
         .btn:hover {
             background: #2980b9;
@@ -96,15 +100,26 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        input {
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>🔍 完整系統測試</h1>
+        <p style="text-align:center; color:#666; margin-bottom:20px;">更新時間: 2026/01/25</p>
+        
         <div id="user-card" style="display:none;" class="user-info">
             <h3>👤 登入使用者</h3>
             <div id="user-display"></div>
         </div>
+        
         <div id="logs"></div>
         <div id="actions" style="text-align:center; margin-top:20px;"></div>
     </div>
@@ -124,25 +139,48 @@
             div.innerHTML = `<small><strong>${new Date().toLocaleTimeString()}</strong></small><br>${message}`;
             logs.appendChild(div);
             logs.scrollTop = logs.scrollHeight;
+            console.log(`[${type}]`, message);
         }
 
         function showLoading(text = '處理中...') {
             actions.innerHTML = `<div class="loading"><div class="spinner"></div><p>${text}</p></div>`;
         }
 
-        async function testLIFF() {
-            addLog('🔧 開始測試 LIFF 初始化...', 'log');
+        // 主要流程
+        async function init() {
+            addLog('🚀 系統啟動', 'log');
+            addLog(`📱 LIFF ID: ${LIFF_ID}`, 'log');
+            addLog(`🌐 當前網址: ${window.location.href}`, 'log');
             
-            try {
-                await liff.init({ liffId: LIFF_ID });
-                addLog('✅ LIFF 初始化成功', 'success');
+            // 檢查 LIFF SDK 是否載入
+            if (typeof liff === 'undefined') {
+                addLog('❌ LIFF SDK 未載入，請檢查網路連線', 'error');
+                return;
+            }
+            addLog('✅ LIFF SDK 已載入', 'success');
 
+            try {
+                addLog('⏳ 正在初始化 LIFF...', 'log');
+                
+                // 初始化 LIFF
+                await liff.init({ liffId: LIFF_ID });
+                
+                addLog('✅ LIFF 初始化成功！', 'success');
+                addLog(`📍 執行環境: ${liff.isInClient() ? 'LINE App 內' : '外部瀏覽器'}`, 'log');
+
+                // 檢查登入狀態
                 if (!liff.isLoggedIn()) {
-                    addLog('⚠️ 未登入，準備跳轉...', 'warning');
-                    setTimeout(() => liff.login(), 2000);
+                    addLog('⚠️ 未登入，3秒後跳轉至登入頁面...', 'warning');
+                    showLoading('準備登入...');
+                    setTimeout(() => {
+                        liff.login();
+                    }, 3000);
                     return;
                 }
 
+                addLog('✅ 已登入 LINE 帳號', 'success');
+
+                // 取得使用者資料
                 const profile = await liff.getProfile();
                 currentUser = {
                     userId: profile.userId,
@@ -150,6 +188,10 @@
                     pictureUrl: profile.pictureUrl
                 };
 
+                addLog('✅ 取得使用者資料成功', 'success');
+                addLog(`<pre>${JSON.stringify(currentUser, null, 2)}</pre>`, 'success');
+
+                // 顯示使用者卡片
                 document.getElementById('user-card').style.display = 'block';
                 document.getElementById('user-display').innerHTML = `
                     <img src="${profile.pictureUrl}" style="width:60px;height:60px;border-radius:50%;border:3px solid white;">
@@ -159,118 +201,156 @@
                     </div>
                 `;
 
-                addLog('✅ 使用者登入成功', 'success');
-                addLog(`<pre>${JSON.stringify(currentUser, null, 2)}</pre>`, 'success');
-
                 // 開始測試 API
-                await testAPI();
+                await testCheckUser();
 
             } catch (error) {
                 addLog('❌ LIFF 初始化失敗', 'error');
-                addLog(`錯誤: ${error.message}`, 'error');
+                addLog(`錯誤類型: ${error.name}`, 'error');
+                addLog(`錯誤訊息: ${error.message}`, 'error');
+                
+                // 詳細錯誤資訊
+                if (error.code) {
+                    addLog(`錯誤代碼: ${error.code}`, 'error');
+                }
+                
+                // 提供解決建議
+                if (error.message.includes('400')) {
+                    addLog('💡 可能原因: LIFF ID 不正確', 'warning');
+                    addLog('請到 LINE Developers Console 確認 LIFF ID', 'warning');
+                } else if (error.message.includes('403')) {
+                    addLog('💡 可能原因: Endpoint URL 設定錯誤', 'warning');
+                    addLog(`應設定為: ${window.location.origin}${window.location.pathname}`, 'warning');
+                }
+
+                actions.innerHTML = '<button class="btn" onclick="location.reload()">重新載入</button>';
             }
         }
 
-        async function testAPI() {
-            addLog('', 'log');
-            addLog('📡 開始測試 GAS API 連線...', 'log');
+        // API 呼叫函數
+        async function callAPI(action, payload) {
+            addLog(`📤 API 請求: ${action}`, 'log');
+            addLog(`📦 Payload: <pre>${JSON.stringify(payload, null, 2)}</pre>`, 'log');
 
-            // 測試 1: checkUser
             try {
-                addLog('⏳ 測試 1/3: 檢查會員狀態...', 'log');
-                showLoading('檢查會員中...');
+                const response = await fetch(GAS_API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action, payload }),
+                    mode: 'cors',
+                    redirect: 'follow'
+                });
 
-                const checkResult = await callAPI('checkUser', { uid: currentUser.userId });
-                
-                addLog('✅ checkUser API 回應:', 'success');
-                addLog(`<pre>${JSON.stringify(checkResult, null, 2)}</pre>`, 'success');
+                addLog(`📥 HTTP 狀態: ${response.status} ${response.statusText}`, 'log');
 
-                if (checkResult) {
-                    addLog('🎉 已找到會員資料！', 'success');
-                    showMemberActions(checkResult);
+                const text = await response.text();
+                addLog(`📄 原始回應 (前 500 字): <pre>${text.substring(0, 500)}</pre>`, 'log');
+
+                let data;
+                try {
+                    data = JSON.parse(text);
+                } catch (parseError) {
+                    addLog('❌ 回應不是有效的 JSON', 'error');
+                    throw new Error('API 回應格式錯誤');
+                }
+
+                addLog(`📊 解析後的資料: <pre>${JSON.stringify(data, null, 2)}</pre>`, 'log');
+
+                if (data.status === 'error') {
+                    throw new Error(data.message || 'API 回傳錯誤');
+                }
+
+                return data.data;
+
+            } catch (error) {
+                addLog(`❌ API 呼叫失敗: ${error.message}`, 'error');
+                throw error;
+            }
+        }
+
+        // 測試 1: 檢查會員
+        async function testCheckUser() {
+            addLog('', 'log');
+            addLog('========== 測試 1/3: 檢查會員狀態 ==========', 'log');
+            showLoading('檢查會員中...');
+
+            try {
+                const user = await callAPI('checkUser', { uid: currentUser.userId });
+
+                if (user) {
+                    addLog('✅ 找到會員資料！', 'success');
+                    addLog(`<pre>${JSON.stringify(user, null, 2)}</pre>`, 'success');
+                    showMemberActions(user);
                 } else {
-                    addLog('⚠️ 未註冊會員，可進行註冊測試', 'warning');
+                    addLog('⚠️ 未註冊會員', 'warning');
                     showRegisterForm();
                 }
 
             } catch (error) {
-                addLog('❌ checkUser 失敗', 'error');
-                addLog(`錯誤: ${error.message}`, 'error');
-                actions.innerHTML = `<button class="btn" onclick="testAPI()">重試</button>`;
+                addLog('❌ 檢查會員失敗', 'error');
+                actions.innerHTML = '<button class="btn" onclick="testCheckUser()">重試</button>';
             }
         }
 
-        async function callAPI(action, payload) {
-            addLog(`📤 API 請求: ${action}`, 'log');
-            addLog(`<pre>${JSON.stringify(payload, null, 2)}</pre>`, 'log');
-
-            const response = await fetch(GAS_API_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action, payload }),
-                mode: 'cors'
-            });
-
-            addLog(`📥 HTTP 狀態: ${response.status} ${response.statusText}`, 'log');
-
-            const text = await response.text();
-            addLog(`📄 原始回應 (前 200 字): ${text.substring(0, 200)}`, 'log');
-
-            const data = JSON.parse(text);
-            
-            if (data.status === 'error') {
-                throw new Error(data.message);
-            }
-
-            return data.data;
-        }
-
+        // 顯示會員操作
         function showMemberActions(member) {
             actions.innerHTML = `
                 <div style="text-align:left; background:#f8f9fa; padding:15px; border-radius:8px; margin-bottom:15px;">
-                    <strong>會員資料:</strong><br>
-                    姓名: ${member.name}<br>
-                    群組: ${member.group_name}<br>
-                    Email: ${member.email}<br>
-                    電話: ${member.phone}<br>
-                    門市: ${member.store}
+                    <strong style="font-size:16px;">📋 會員資料</strong><br><br>
+                    <strong>姓名:</strong> ${member.name || '未設定'}<br>
+                    <strong>群組:</strong> ${member.group_name || '未設定'}<br>
+                    <strong>Email:</strong> ${member.email || '未設定'}<br>
+                    <strong>電話:</strong> ${member.phone || '未設定'}<br>
+                    <strong>門市:</strong> ${member.store || '未設定'}
                 </div>
                 <button class="btn btn-success" onclick="testGetMarkets()">測試取得賣場</button>
                 <button class="btn" onclick="location.reload()">重新測試</button>
             `;
         }
 
+        // 顯示註冊表單
         function showRegisterForm() {
             actions.innerHTML = `
                 <div style="text-align:left;">
-                    <h3>📝 註冊測試</h3>
-                    <input type="email" id="email" placeholder="Email" style="width:100%;padding:10px;margin:5px 0;border:1px solid #ddd;border-radius:4px;">
-                    <input type="text" id="name" placeholder="群內名稱" style="width:100%;padding:10px;margin:5px 0;border:1px solid #ddd;border-radius:4px;">
-                    <input type="text" id="receiver" placeholder="收件人" style="width:100%;padding:10px;margin:5px 0;border:1px solid #ddd;border-radius:4px;">
-                    <input type="tel" id="phone" placeholder="手機 09xxxxxxxx" style="width:100%;padding:10px;margin:5px 0;border:1px solid #ddd;border-radius:4px;">
-                    <input type="text" id="store" placeholder="7-11門市" style="width:100%;padding:10px;margin:5px 0;border:1px solid #ddd;border-radius:4px;">
-                    <button class="btn btn-success" onclick="testRegister()" style="width:100%;margin-top:10px;">送出註冊</button>
+                    <h3 style="margin-bottom:15px;">📝 測試註冊功能</h3>
+                    <input type="email" id="email" placeholder="Email" required>
+                    <input type="text" id="name" placeholder="群內名稱 (例如: 一般會員)" required>
+                    <input type="text" id="receiver" placeholder="收件人姓名" required>
+                    <input type="tel" id="phone" placeholder="手機號碼 (09xxxxxxxx)" maxlength="10" required>
+                    <input type="text" id="store" placeholder="7-11 門市名稱" required>
+                    <button class="btn btn-success" onclick="testRegister()" style="width:100%; margin-top:10px;">送出註冊</button>
+                    <p style="font-size:12px; color:#666; margin-top:10px;">
+                        ⚠️ 注意: group_name (群內名稱) 必須與 Markets 表中的 group_name 完全一致才能看到賣場
+                    </p>
                 </div>
             `;
         }
 
+        // 測試 2: 註冊
         async function testRegister() {
             const payload = {
                 uid: currentUser.userId,
-                email: document.getElementById('email').value,
-                name: document.getElementById('name').value,
-                receiver: document.getElementById('receiver').value,
-                phone: document.getElementById('phone').value,
-                store: document.getElementById('store').value
+                email: document.getElementById('email').value.trim(),
+                name: document.getElementById('name').value.trim(),
+                receiver: document.getElementById('receiver').value.trim(),
+                phone: document.getElementById('phone').value.trim(),
+                store: document.getElementById('store').value.trim()
             };
 
+            // 驗證
             if (!payload.email || !payload.name || !payload.receiver || !payload.phone || !payload.store) {
                 addLog('❌ 請填寫所有欄位', 'error');
                 return;
             }
 
+            if (!/^09\d{8}$/.test(payload.phone)) {
+                addLog('❌ 手機格式錯誤，請輸入 09xxxxxxxx', 'error');
+                return;
+            }
+
             try {
-                addLog('⏳ 測試 2/3: 註冊會員...', 'log');
+                addLog('', 'log');
+                addLog('========== 測試 2/3: 註冊會員 ==========', 'log');
                 showLoading('註冊中...');
 
                 const result = await callAPI('register', payload);
@@ -278,64 +358,79 @@
                 addLog('✅ 註冊成功！', 'success');
                 addLog(`<pre>${JSON.stringify(result, null, 2)}</pre>`, 'success');
 
-                // 重新檢查會員狀態
-                setTimeout(() => testAPI(), 2000);
+                // 2秒後重新檢查會員狀態
+                addLog('⏳ 2秒後重新檢查會員狀態...', 'log');
+                setTimeout(() => testCheckUser(), 2000);
 
             } catch (error) {
                 addLog('❌ 註冊失敗', 'error');
-                addLog(`錯誤: ${error.message}`, 'error');
                 showRegisterForm();
             }
         }
 
+        // 測試 3: 取得賣場
         async function testGetMarkets() {
             try {
-                addLog('⏳ 測試 3/3: 取得賣場列表...', 'log');
+                addLog('', 'log');
+                addLog('========== 測試 3/3: 取得賣場列表 ==========', 'log');
                 showLoading('載入賣場中...');
 
                 const markets = await callAPI('getMarkets', { uid: currentUser.userId });
                 
-                addLog('✅ getMarkets API 回應:', 'success');
+                addLog('✅ getMarkets API 回應成功', 'success');
                 addLog(`<pre>${JSON.stringify(markets, null, 2)}</pre>`, 'success');
 
                 if (markets && markets.length > 0) {
-                    let html = '<div style="text-align:left;"><h3>🛒 您的賣場列表</h3>';
-                    markets.forEach(m => {
+                    let html = '<div style="text-align:left;"><h3 style="margin-bottom:15px;">🛒 您的賣場列表</h3>';
+                    markets.forEach((m, index) => {
                         html += `
                             <div style="background:#f8f9fa;padding:15px;margin:10px 0;border-radius:8px;border-left:4px solid #3498db;">
-                                <strong>${m.title}</strong><br>
-                                <small>${m.desc}</small><br>
-                                <a href="${m.link}" target="_blank" style="color:#3498db;">🔗 ${m.link}</a>
+                                <strong>${index + 1}. ${m.title || '未命名賣場'}</strong><br>
+                                <small style="color:#666;">${m.desc || '無描述'}</small><br>
+                                <a href="${m.link}" target="_blank" style="color:#3498db; text-decoration:none;">🔗 ${m.link}</a>
                             </div>
                         `;
                     });
-                    html += '</div><button class="btn" onclick="location.reload()">重新測試</button>';
+                    html += '</div><button class="btn" onclick="location.reload()" style="margin-top:15px;">重新測試</button>';
                     actions.innerHTML = html;
+                    
                     addLog(`🎉 成功載入 ${markets.length} 個賣場`, 'success');
                 } else {
                     addLog('⚠️ 目前沒有賣場資料', 'warning');
                     actions.innerHTML = `
                         <div style="padding:20px;background:#ffeaa7;border-radius:8px;">
-                            <strong>提示:</strong> 請確認以下事項<br>
-                            1. Markets 表中有資料<br>
-                            2. group_name 與使用者的 group_name 一致<br>
-                            3. status 欄位為 'active'
+                            <strong>⚠️ 找不到賣場資料</strong><br><br>
+                            請檢查以下事項：<br>
+                            1. Markets 表 (ID: 1Bu7v-Zy6Vu_al0hPmRE8PsMZW4tBT5_DsGzU42xh8cU) 是否有資料<br>
+                            2. Markets 表的 <strong>group_name</strong> 是否與您的群組名稱一致<br>
+                            3. Markets 表的 <strong>status</strong> 欄位是否為 'active'<br>
+                            4. GAS 是否有 Markets 表的讀取權限
                         </div>
+                        <button class="btn" onclick="testGetMarkets()" style="margin-top:10px;">重試</button>
                         <button class="btn" onclick="location.reload()">重新測試</button>
                     `;
                 }
 
             } catch (error) {
                 addLog('❌ 取得賣場失敗', 'error');
-                addLog(`錯誤: ${error.message}`, 'error');
-                actions.innerHTML = `<button class="btn" onclick="testGetMarkets()">重試</button>`;
+                actions.innerHTML = `
+                    <button class="btn" onclick="testGetMarkets()">重試</button>
+                    <button class="btn" onclick="location.reload()">重新測試</button>
+                `;
             }
         }
 
-        // 啟動
+        // 頁面載入時啟動
         window.addEventListener('load', () => {
             addLog('📄 頁面載入完成', 'log');
-            setTimeout(testLIFF, 500);
+            // 延遲 500ms 確保 LIFF SDK 完全載入
+            setTimeout(init, 500);
+        });
+
+        // 錯誤捕捉
+        window.addEventListener('error', (e) => {
+            addLog(`❌ 全域錯誤: ${e.message}`, 'error');
+            console.error('Global error:', e);
         });
     </script>
 </body>
