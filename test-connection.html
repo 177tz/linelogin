@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GAS 連線測試</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: white;
+        }
+        .container {
+            max-width: 700px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            color: #333;
+        }
+        h1 { 
+            color: #2c3e50; 
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .url-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            margin-bottom: 15px;
+            font-family: monospace;
+        }
+        .url-input:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+        .btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s;
+        }
+        .btn:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+        }
+        .btn-success { background: #27ae60; }
+        .btn-success:hover { background: #229954; }
+        .log {
+            background: #f8f9fa;
+            padding: 12px;
+            margin: 8px 0;
+            border-radius: 6px;
+            border-left: 4px solid #3498db;
+            font-size: 14px;
+            word-wrap: break-word;
+        }
+        .log.success { 
+            background: #d4edda; 
+            border-left-color: #28a745; 
+        }
+        .log.error { 
+            background: #f8d7da; 
+            border-left-color: #dc3545; 
+        }
+        .log.warning { 
+            background: #fff3cd; 
+            border-left-color: #ffc107; 
+        }
+        pre {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+        .test-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        .test-section h3 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔌 GAS API 連線測試工具</h1>
+        
+        <div class="test-section">
+            <h3>📝 設定 GAS API 網址</h3>
+            <input 
+                type="text" 
+                id="gasUrl" 
+                class="url-input" 
+                placeholder="貼上你的 GAS Web App URL"
+                value="https://script.google.com/macros/s/AKfycbx_XdnntUyxjevUUF4_zLrqxt649f01Cs6sMt6r94isD2x45iRbTlvriRicP4IpKybUAA/exec"
+            >
+            <div style="text-align: center;">
+                <button class="btn" onclick="testGET()">測試 1: GET 請求</button>
+                <button class="btn btn-success" onclick="testPOST()">測試 2: POST 請求</button>
+            </div>
+        </div>
+
+        <div id="logs"></div>
+    </div>
+
+    <script>
+        const logsContainer = document.getElementById('logs');
+
+        function addLog(message, type = 'log') {
+            const div = document.createElement('div');
+            div.className = `log ${type}`;
+            div.innerHTML = `<strong>${new Date().toLocaleTimeString()}</strong><br>${message}`;
+            logsContainer.appendChild(div);
+            logsContainer.scrollTop = logsContainer.scrollHeight;
+        }
+
+        function clearLogs() {
+            logsContainer.innerHTML = '';
+        }
+
+        async function testGET() {
+            clearLogs();
+            const url = document.getElementById('gasUrl').value.trim();
+            
+            if (!url) {
+                addLog('❌ 請輸入 GAS API 網址', 'error');
+                return;
+            }
+
+            addLog('🔍 測試 1: GET 請求', 'log');
+            addLog(`📡 目標網址: ${url}`, 'log');
+
+            try {
+                addLog('⏳ 發送請求中...', 'log');
+                
+                const startTime = Date.now();
+                const response = await fetch(url, {
+                    method: 'GET',
+                    mode: 'cors',
+                    cache: 'no-cache'
+                });
+                const endTime = Date.now();
+
+                addLog(`⏱️ 回應時間: ${endTime - startTime}ms`, 'log');
+                addLog(`📊 HTTP 狀態: ${response.status} ${response.statusText}`, response.ok ? 'success' : 'error');
+
+                // 檢查 CORS headers
+                addLog('📋 回應標頭:', 'log');
+                const headers = {};
+                response.headers.forEach((value, key) => {
+                    headers[key] = value;
+                });
+                addLog(`<pre>${JSON.stringify(headers, null, 2)}</pre>`, 'log');
+
+                const text = await response.text();
+                addLog('📄 原始回應:', 'log');
+                addLog(`<pre>${text}</pre>`, 'log');
+
+                try {
+                    const data = JSON.parse(text);
+                    addLog('✅ JSON 解析成功！', 'success');
+                    addLog(`<pre>${JSON.stringify(data, null, 2)}</pre>`, 'success');
+                    
+                    if (data.status === 'success') {
+                        addLog('🎉 GET 測試完全成功！GAS API 運作正常', 'success');
+                    }
+                } catch (e) {
+                    addLog('⚠️ 回應不是 JSON 格式', 'warning');
+                }
+
+            } catch (error) {
+                addLog('❌ GET 請求失敗', 'error');
+                addLog(`錯誤類型: ${error.name}`, 'error');
+                addLog(`錯誤訊息: ${error.message}`, 'error');
+                
+                if (error.message.includes('Failed to fetch')) {
+                    addLog('', 'error');
+                    addLog('💡 可能的原因:', 'warning');
+                    addLog('1. GAS 部署設定的「具有存取權的使用者」不是「任何人」', 'warning');
+                    addLog('2. GAS 網址錯誤或已過期', 'warning');
+                    addLog('3. 網路連線問題', 'warning');
+                    addLog('4. GAS 腳本執行逾時', 'warning');
+                }
+            }
+        }
+
+        async function testPOST() {
+            clearLogs();
+            const url = document.getElementById('gasUrl').value.trim();
+            
+            if (!url) {
+                addLog('❌ 請輸入 GAS API 網址', 'error');
+                return;
+            }
+
+            addLog('🔍 測試 2: POST 請求 (checkUser)', 'log');
+            addLog(`📡 目標網址: ${url}`, 'log');
+
+            const testPayload = {
+                action: 'checkUser',
+                payload: { uid: 'U5840abffd27434e1a0e6a6f5c7c738a0' }
+            };
+
+            addLog('📦 測試資料:', 'log');
+            addLog(`<pre>${JSON.stringify(testPayload, null, 2)}</pre>`, 'log');
+
+            try {
+                addLog('⏳ 發送 POST 請求中...', 'log');
+                
+                const startTime = Date.now();
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(testPayload),
+                    mode: 'cors',
+                    cache: 'no-cache'
+                });
+                const endTime = Date.now();
+
+                addLog(`⏱️ 回應時間: ${endTime - startTime}ms`, 'log');
+                addLog(`📊 HTTP 狀態: ${response.status} ${response.statusText}`, response.ok ? 'success' : 'error');
+
+                const text = await response.text();
+                addLog('📄 原始回應:', 'log');
+                addLog(`<pre>${text.substring(0, 1000)}</pre>`, 'log');
+
+                try {
+                    const data = JSON.parse(text);
+                    addLog('✅ JSON 解析成功！', 'success');
+                    addLog(`<pre>${JSON.stringify(data, null, 2)}</pre>`, 'success');
+                    
+                    if (data.status === 'success') {
+                        addLog('🎉 POST 測試完全成功！', 'success');
+                        
+                        if (data.data) {
+                            addLog('✅ 找到會員資料', 'success');
+                        } else {
+                            addLog('⚠️ 未找到會員（可能尚未註冊）', 'warning');
+                        }
+                    } else if (data.status === 'error') {
+                        addLog(`❌ API 回傳錯誤: ${data.message}`, 'error');
+                    }
+                } catch (e) {
+                    addLog('❌ JSON 解析失敗', 'error');
+                    addLog(`錯誤: ${e.message}`, 'error');
+                }
+
+            } catch (error) {
+                addLog('❌ POST 請求失敗', 'error');
+                addLog(`錯誤類型: ${error.name}`, 'error');
+                addLog(`錯誤訊息: ${error.message}`, 'error');
+                addLog(`完整錯誤: <pre>${JSON.stringify(error, Object.getOwnPropertyNames(error), 2)}</pre>`, 'error');
+                
+                if (error.message.includes('Failed to fetch')) {
+                    addLog('', 'error');
+                    addLog('💡 解決步驟:', 'warning');
+                    addLog('步驟 1: 開啟 Google Apps Script', 'warning');
+                    addLog('步驟 2: 點擊右上角「部署」→「管理部署作業」', 'warning');
+                    addLog('步驟 3: 點擊「編輯」（鉛筆圖示）', 'warning');
+                    addLog('步驟 4: 將「具有存取權的使用者」改為「任何人」', 'warning');
+                    addLog('步驟 5: 選擇「新版本」後點擊「部署」', 'warning');
+                    addLog('步驟 6: 複製新的網址並更新到這裡測試', 'warning');
+                }
+            }
+        }
+
+        // 頁面載入時的提示
+        window.addEventListener('load', () => {
+            addLog('✅ 測試工具已就緒', 'success');
+            addLog('請確認 GAS API 網址正確後，點擊按鈕開始測試', 'log');
+        });
+    </script>
+</body>
+</html>
