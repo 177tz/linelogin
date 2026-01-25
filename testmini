@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>最小化測試</title>
+</head>
+<body>
+    <h1>GAS 連線測試</h1>
+    <button onclick="test()">點擊測試</button>
+    <pre id="result"></pre>
+
+    <script>
+        const API_URL = 'https://script.google.com/macros/s/AKfycbxBYGembsKk9zgHeMIJ8Qx2Sm9Ft6clWx9XsrH26DUhgIn0Lv8sEmJJ8tHVJV-d0eGK6A/exec';
+
+        async function test() {
+            const result = document.getElementById('result');
+            result.textContent = '測試中...\n';
+
+            try {
+                // 測試 1: GET
+                result.textContent += '\n=== 測試 GET ===\n';
+                const r1 = await fetch(API_URL);
+                result.textContent += `狀態: ${r1.status}\n`;
+                const t1 = await r1.text();
+                result.textContent += `回應: ${t1}\n`;
+
+                // 測試 2: POST
+                result.textContent += '\n=== 測試 POST ===\n';
+                const r2 = await fetch(API_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        action: 'checkUser',
+                        payload: { uid: 'U5840abffd27434e1a0e6a6f5c7c738a0' }
+                    })
+                });
+                result.textContent += `狀態: ${r2.status}\n`;
+                const t2 = await r2.text();
+                result.textContent += `回應: ${t2}\n`;
+
+            } catch (error) {
+                result.textContent += `\n錯誤: ${error.message}\n`;
+                result.textContent += `\n這表示無法連線到 GAS\n`;
+                result.textContent += `請檢查:\n`;
+                result.textContent += `1. GAS 網址是否正確\n`;
+                result.textContent += `2. 部署設定是否為"任何人"\n`;
+                result.textContent += `3. 是否已授權\n`;
+            }
+        }
+    </script>
+</body>
+</html>
