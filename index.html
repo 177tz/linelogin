@@ -20,27 +20,39 @@
         
         .dashboard-card { background: white; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.04); padding: 20px; margin-bottom: 15px; }
         .menu-btn {
-            background: white; border: none; border-radius: 12px; padding: 15px;
+            background: white; border: none; border-radius: 12px; padding: 12px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.03); display: flex; flex-direction: column; align-items: center;
             color: var(--primary); transition: 0.2s;
         }
         .menu-btn.active { background: var(--primary); color: white; box-shadow: 0 4px 12px rgba(44, 62, 80, 0.3); }
-        .menu-btn i { font-size: 1.8rem; margin-bottom: 5px; }
+        .menu-btn i { font-size: 1.5rem; margin-bottom: 4px; }
         
-        /* 訂單明細樣式 */
+        /* 團購活動卡片樣式 */
+        .group-buy-card { 
+            border: 1px solid #eee; border-radius: 12px; overflow: hidden; margin-bottom: 20px; background: white; 
+        }
+        .group-header {
+            background: #f8f9fa; padding: 12px 15px; border-bottom: 1px solid #eee;
+            font-weight: 700; color: var(--primary); display: flex; align-items: center;
+        }
+        .group-header i { margin-right: 8px; color: var(--accent); }
+        
+        .detail-list { padding: 0 15px; }
         .detail-item {
             display: flex; justify-content: space-between; align-items: center;
-            padding: 12px 0; border-bottom: 1px dashed #eee;
+            padding: 12px 0; border-bottom: 1px dashed #eee; font-size: 0.95rem;
         }
         .detail-item:last-child { border-bottom: none; }
-        .batch-tag { font-size: 0.75rem; background: #eef2f3; color: #666; padding: 2px 8px; border-radius: 4px; margin-left: 8px; }
+        
+        .summary-section {
+            background: #fff; padding: 15px; border-top: 1px solid #eee;
+        }
+        .status-badge { padding: 5px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 500; }
+        .bg-ok { background: #d4edda; color: #155724; }
+        .bg-wait { background: #fff3cd; color: #856404; }
+        .bg-err { background: #f8d7da; color: #721c24; }
+        .bg-cod { background: #d1ecf1; color: #0c5460; }
 
-        /* 對帳狀態樣式 */
-        .status-card { background: #fff; border-radius: 12px; padding: 15px; border-left: 5px solid #ccc; margin-top: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-        .status-ok { border-color: #2ecc71; }
-        .status-wait { border-color: #f1c40f; }
-        .status-cod { border-color: #3498db; }
-        .status-err { border-color: #e74c3c; }
     </style>
 </head>
 <body>
@@ -69,7 +81,7 @@
         </div>
 
         <div id="dashboard-view" class="hidden">
-            <div class="d-grid grid-template-columns gap-2 mb-4" style="grid-template-columns: 1fr 1fr 1fr 1fr;">
+            <div class="d-grid gap-2 mb-4" style="grid-template-columns: repeat(4, 1fr);">
                 <button class="menu-btn" onclick="switchTab('profile', this)"><i class="bi bi-person-vcard"></i><span class="small">資料</span></button>
                 <button class="menu-btn" onclick="switchTab('orders', this)"><i class="bi bi-box-seam"></i><span class="small">訂單</span></button>
                 <button class="menu-btn active" onclick="switchTab('markets', this)"><i class="bi bi-shop"></i><span class="small">賣場</span></button>
@@ -86,15 +98,8 @@
                 </div>
 
                 <div id="tab-orders" class="content-section hidden">
-                    
-                    <h6 class="ps-1 mb-2 text-secondary"><i class="bi bi-list-ul me-2"></i>訂購明細</h6>
-                    <div class="dashboard-card mb-4">
-                        <div id="order-details-list">
-                            </div>
-                    </div>
-
-                    <h6 class="ps-1 mb-2 text-secondary"><i class="bi bi-wallet2 me-2"></i>對帳/付款狀態</h6>
-                    <div id="order-summary-list">
+                    <h6 class="ps-1 mb-3 text-secondary"><i class="bi bi-calendar-check me-2"></i>訂購紀錄</h6>
+                    <div id="orders-container">
                         </div>
                 </div>
 
@@ -168,56 +173,71 @@
         }
 
         async function loadOrders(uid) {
-            const divDetails = document.getElementById('order-details-list');
-            const divSummary = document.getElementById('order-summary-list');
-            
-            divDetails.innerHTML = '<div class="text-center small text-muted py-2">載入明細...</div>';
-            divSummary.innerHTML = '<div class="text-center small text-muted py-2">載入對帳...</div>';
+            const container = document.getElementById('orders-container');
+            container.innerHTML = '<div class="text-center small text-muted py-5"><div class="spinner-border spinner-border-sm mb-2"></div><br>同步多期團購資料...</div>';
             
             try {
-                // 這次回傳的是 { details: [], summary: [] }
-                const data = await callApi('getOrders', {uid});
+                // 回傳結構: [{ groupName: "1月團", details: [], summary: [] }, ...]
+                const groups = await callApi('getOrders', {uid});
                 
-                // 1. 渲染明細 (Source A)
-                if (data.details && data.details.length > 0) {
-                    divDetails.innerHTML = data.details.map(d => `
-                        <div class="detail-item fade-in">
-                            <div>
-                                <span class="fw-bold text-dark">${d.item}</span>
-                                <span class="batch-tag">${d.note}</span>
+                if (!groups || groups.length === 0) {
+                    container.innerHTML = '<div class="text-center py-5 text-muted"><i class="bi bi-clipboard-x display-1 opacity-25"></i><p class="mt-3">目前無訂單紀錄</p></div>';
+                    return;
+                }
+
+                container.innerHTML = groups.map(group => {
+                    // 1. 產生明細 HTML
+                    let detailsHtml = '';
+                    if (group.details && group.details.length > 0) {
+                        detailsHtml = group.details.map(d => `
+                            <div class="detail-item">
+                                <div>${d.item}<span class="text-muted ms-2 small">(${d.note})</span></div>
+                                <span class="badge bg-secondary rounded-pill">x${d.qty}</span>
                             </div>
-                            <span class="badge bg-secondary rounded-pill">x${d.qty}</span>
+                        `).join('');
+                    } else {
+                        detailsHtml = '<div class="text-center small text-muted py-2">無明細資料</div>';
+                    }
+
+                    // 2. 產生對帳 HTML
+                    let summaryHtml = '';
+                    if (group.summary && group.summary.length > 0) {
+                        summaryHtml = group.summary.map(s => {
+                            let badgeClass = 'bg-wait';
+                            if (s.status.includes('✅') || s.status.includes('核對')) badgeClass = 'bg-ok';
+                            else if (s.status.includes('❌')) badgeClass = 'bg-err';
+                            else if (s.status.includes('貨到')) badgeClass = 'bg-cod';
+
+                            return `
+                                <div class="d-flex justify-content-between align-items-center mt-2">
+                                    <span class="small text-muted">應付總額: <strong class="text-dark fs-6">$${s.total}</strong></span>
+                                    <span class="status-badge ${badgeClass}">${s.status}</span>
+                                </div>
+                            `;
+                        }).join('');
+                    } else {
+                        summaryHtml = '<div class="text-center small text-muted py-2">尚無對帳資料</div>';
+                    }
+
+                    // 3. 組合卡片
+                    return `
+                        <div class="group-buy-card fade-in">
+                            <div class="group-header">
+                                <i class="bi bi-folder2-open"></i> ${group.groupName}
+                            </div>
+                            <div class="detail-list">
+                                ${detailsHtml}
+                            </div>
+                            <div class="summary-section">
+                                ${summaryHtml}
+                            </div>
                         </div>
-                    `).join('');
-                } else {
-                    divDetails.innerHTML = '<div class="text-center small text-muted py-3">尚無訂購紀錄</div>';
-                }
-
-                // 2. 渲染對帳 (Source B)
-                if (data.summary && data.summary.length > 0) {
-                    divSummary.innerHTML = data.summary.map(s => {
-                        let colorClass = 'status-wait'; // 預設黃色
-                        if (s.status.includes('✅') || s.status.includes('核對')) colorClass = 'status-ok'; // 綠色
-                        else if (s.status.includes('❌')) colorClass = 'status-err'; // 紅色
-                        else if (s.status.includes('貨到')) colorClass = 'status-cod'; // 藍色
-
-                        return `
-                        <div class="status-card ${colorClass} fade-in">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span class="fw-bold fs-5 text-dark">$${s.total}</span>
-                                <span class="badge bg-light text-dark border">${s.status}</span>
-                            </div>
-                            <div class="small text-muted mt-1">應付總額</div>
-                        </div>`;
-                    }).join('');
-                } else {
-                    divSummary.innerHTML = '<div class="text-center small text-muted py-3">尚無對帳資料</div>';
-                }
+                    `;
+                }).join('');
 
             } catch (e) {
                 console.error(e);
-                divDetails.innerHTML = '<div class="text-danger small text-center">載入失敗</div>';
-                divSummary.innerHTML = '';
+                container.innerHTML = '<div class="alert alert-danger text-center small">載入失敗: ' + e.message + '</div>';
             }
         }
 
