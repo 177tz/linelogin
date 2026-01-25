@@ -4,20 +4,72 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Ormkub 會員儀表板</title>
+    
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+
     <style>
-        /* 直接沿用之前的 CSS 樣式 */
-        :root { --primary-color: #2c3e50; --accent-color: #3498db; --bg-gradient: linear-gradient(135deg, #f6f8fb 0%, #eef2f3 100%); }
-        body { font-family: 'Noto Sans TC', sans-serif; background: var(--bg-gradient); min-height: 100vh; padding-bottom: 60px; }
+        :root {
+            --primary-color: #2c3e50;
+            --accent-color: #3498db;
+            --bg-gradient: linear-gradient(135deg, #f6f8fb 0%, #eef2f3 100%);
+        }
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background: var(--bg-gradient);
+            min-height: 100vh;
+            padding-bottom: 80px; /* 預留底部空間 */
+        }
         .hidden { display: none !important; }
-        .fade-in { animation: fadeIn 0.4s ease-out forwards; opacity: 0; }
+        .fade-in { animation: fadeIn 0.3s ease-out forwards; opacity: 0; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        #loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.95); z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; }
-        .custom-card { border: none; border-radius: 16px; background: white; box-shadow: 0 4px 20px rgba(0,0,0,0.06); padding: 24px; margin-bottom: 20px; }
-        .btn-custom { background: var(--primary-color); color: white; border-radius: 50px; padding: 12px 0; font-weight: 500; }
-        .market-item { border-left: 5px solid var(--accent-color); }
+
+        /* Loading */
+        #loading-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255,255,255,0.95); z-index: 9999;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+        }
+
+        /* 儀表板卡片 */
+        .dashboard-card {
+            background: white; border: none; border-radius: 16px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            padding: 20px; margin-bottom: 20px;
+        }
+        
+        /* 2x2 選單按鈕 */
+        .menu-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        .menu-btn {
+            background: white; border: none; border-radius: 16px;
+            padding: 20px 10px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.03);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            transition: all 0.2s;
+            cursor: pointer;
+            color: var(--primary-color);
+        }
+        .menu-btn:active { transform: scale(0.96); background: #f8f9fa; }
+        .menu-btn.active { background: var(--primary-color); color: white; box-shadow: 0 8px 20px rgba(44, 62, 80, 0.3); }
+        .menu-btn i { font-size: 2rem; margin-bottom: 8px; }
+        .menu-btn span { font-size: 0.9rem; font-weight: 500; }
+
+        /* 內容區塊 */
+        .content-section { display: none; }
+        .content-section.active { display: block; }
+
+        /* 列表樣式 */
+        .info-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #eee; }
+        .info-label { color: #888; font-size: 0.9rem; }
+        .info-value { font-weight: 500; color: #333; }
+        
+        .market-item { border-left: 5px solid var(--accent-color); padding: 15px; background: white; border-radius: 12px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
     </style>
 </head>
 <body>
@@ -28,54 +80,99 @@
     </div>
 
     <div id="app" class="container" style="max-width: 500px;">
-        <div class="text-center mt-5 mb-4 fade-in">
-            <h4 class="fw-bold" style="color:var(--primary-color);">Ormkub 代購服務</h4>
+        
+        <div class="text-center mt-4 mb-4 fade-in">
+            <h5 class="fw-bold text-secondary mb-0">Ormkub Dashboard</h5>
+            <h3 class="fw-bold mt-1" style="color:var(--primary-color);">
+                Hi, <span id="header-name">...</span>
+            </h3>
         </div>
 
-        <div id="register-view" class="custom-card fade-in hidden">
-            <h5 class="text-center mb-4 fw-bold">會員綁定</h5>
+        <div id="register-view" class="dashboard-card fade-in hidden">
+            <h5 class="text-center mb-4 fw-bold">啟用會員帳號</h5>
             <form onsubmit="event.preventDefault(); doRegister();">
-                <div class="mb-3"><input type="email" id="reg-email" class="form-control" placeholder="Email" required></div>
-                <div class="mb-3"><input type="text" id="reg-name" class="form-control" placeholder="群內名稱 (重要)" required></div>
-                <div class="mb-3"><input type="text" id="reg-receiver" class="form-control" placeholder="收件人姓名" required></div>
-                <div class="mb-3"><input type="tel" id="reg-phone" class="form-control" placeholder="手機號碼" required></div>
-                <div class="mb-3"><input type="text" id="reg-store" class="form-control" placeholder="7-11 門市" required></div>
-                <button type="submit" id="reg-btn" class="btn btn-custom w-100">確認綁定</button>
+                <div class="mb-3"><label class="small text-muted">Email</label><input type="email" id="reg-email" class="form-control" required></div>
+                <div class="mb-3"><label class="small text-muted">群內名稱 (重要)</label><input type="text" id="reg-name" class="form-control" required></div>
+                <div class="mb-3"><label class="small text-muted">收件人姓名</label><input type="text" id="reg-receiver" class="form-control" required></div>
+                <div class="mb-3"><label class="small text-muted">手機號碼</label><input type="tel" id="reg-phone" class="form-control" required></div>
+                <div class="mb-3"><label class="small text-muted">7-11 門市</label><input type="text" id="reg-store" class="form-control" required></div>
+                <button type="submit" id="reg-btn" class="btn btn-primary w-100 rounded-pill py-2">確認綁定</button>
             </form>
         </div>
 
         <div id="dashboard-view" class="hidden">
-            <div class="custom-card fade-in mb-3" style="background: linear-gradient(135deg, #2c3e50, #4ca1af); color: white;">
-                <h4>Hi, <span id="user-name">...</span></h4>
-                <div class="badge bg-light text-dark opacity-75" id="user-group">...</div>
+            
+            <div class="menu-grid fade-in">
+                <button class="menu-btn" onclick="switchTab('profile', this)">
+                    <i class="bi bi-person-vcard"></i>
+                    <span>個人資料</span>
+                </button>
+                
+                <button class="menu-btn" onclick="switchTab('orders', this)">
+                    <i class="bi bi-box-seam"></i>
+                    <span>目前訂單</span>
+                </button>
+                
+                <button class="menu-btn active" id="btn-markets" onclick="switchTab('markets', this)">
+                    <i class="bi bi-shop"></i>
+                    <span>可下單賣場</span>
+                </button>
+                
+                <button class="menu-btn" onclick="refreshData()">
+                    <i class="bi bi-arrow-clockwise"></i>
+                    <span>重新整理</span>
+                </button>
             </div>
-            
-            <h6 class="text-muted ms-2 mb-3 fw-bold">專屬賣場</h6>
-            <div id="market-list"></div>
-            
-            <button class="btn btn-outline-secondary w-100 mt-4 rounded-pill" onclick="location.reload()">重新整理</button>
+
+            <div id="content-area">
+                
+                <div id="tab-profile" class="content-section dashboard-card fade-in">
+                    <h6 class="fw-bold mb-3 border-bottom pb-2"><i class="bi bi-person-circle me-2"></i>會員檔案</h6>
+                    <div class="info-row"><span class="info-label">群組名稱</span><span class="info-value" id="p-group">...</span></div>
+                    <div class="info-row"><span class="info-label">收件人</span><span class="info-value" id="p-name">...</span></div>
+                    <div class="info-row"><span class="info-label">Email</span><span class="info-value small" id="p-email">...</span></div>
+                    <div class="info-row"><span class="info-label">手機</span><span class="info-value" id="p-phone">...</span></div>
+                    <div class="info-row border-0"><span class="info-label">常用門市</span><span class="info-value" id="p-store">...</span></div>
+                </div>
+
+                <div id="tab-orders" class="content-section dashboard-card fade-in">
+                    <h6 class="fw-bold mb-3 border-bottom pb-2"><i class="bi bi-list-check me-2"></i>我的訂單</h6>
+                    <div id="order-list-container" class="text-center py-4 text-muted">
+                        <i class="bi bi-inbox display-4 opacity-25"></i>
+                        <p class="mt-3 small">目前沒有進行中的訂單</p>
+                    </div>
+                </div>
+
+                <div id="tab-markets" class="content-section active fade-in">
+                    <h6 class="fw-bold mb-3 ms-2 text-secondary"><i class="bi bi-cart4 me-2"></i>專屬賣場</h6>
+                    <div id="market-list-container">
+                        </div>
+                </div>
+
+            </div>
         </div>
+
     </div>
 
-    <div class="modal fade" id="infoModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-body" id="infoModalBody"></div><div class="modal-footer"><button type="button" class="btn btn-primary" data-bs-dismiss="modal">OK</button></div></div></div></div>
+    <div class="modal fade" id="infoModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow"><div class="modal-body p-4 text-center"><h5 id="modalTitle" class="fw-bold mb-3"></h5><p id="modalBody" class="text-muted mb-4"></p><button type="button" class="btn btn-primary rounded-pill w-100" data-bs-dismiss="modal">確定</button></div></div></div></div>
 
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
         // ==========================================
-        // ⚙️ 系統設定 (已更新)
+        // ⚙️ [黃金設定] 17WXD 正確版 Users 資料庫
         // ==========================================
         const CONFIG = {
-            // 🔥 已更新為你提供的網址
             API_URL: 'https://script.google.com/macros/s/AKfycbw69JlYcBV5vj0yFjxNN1GgiMcQt6xKuym0ANK1tvKdlbnvYTnQ4wgX_dX1IiWIcr08IQ/exec',
-            
-            // 🔥 已更新為你的 LIFF ID
             LIFF_ID: '2008947743-8h9hmMMW' 
         };
 
+        // 全域變數
         let currentUid = '';
+        let currentUserData = null; // 暫存使用者資料
 
+        // 初始化
         window.addEventListener('load', async () => {
             await initLIFF();
         });
@@ -84,20 +181,18 @@
             try {
                 await liff.init({ liffId: CONFIG.LIFF_ID });
                 if (!liff.isLoggedIn()) { liff.login(); return; }
-                
                 const profile = await liff.getProfile();
                 currentUid = profile.userId;
                 console.log('Uid:', currentUid);
                 await checkUserStatus(currentUid);
             } catch (err) {
-                showMsg('Error', 'LIFF 初始化失敗: ' + err.message);
                 hideLoading();
+                showMsg('系統錯誤', err.message);
             }
         }
 
         async function callApi(action, payload = {}) {
             try {
-                // 使用 POST JSON 確保資料完整
                 const response = await fetch(CONFIG.API_URL, {
                     method: 'POST',
                     body: JSON.stringify({ action, payload })
@@ -116,61 +211,109 @@
                 const user = await callApi('checkUser', { uid });
                 hideLoading();
                 if (user) {
-                    document.getElementById('user-name').textContent = user.name;
-                    document.getElementById('user-group').textContent = user.group_name;
-                    showView('dashboard-view');
-                    loadMarkets(uid);
+                    currentUserData = user; // 存起來給「個人資料」頁面用
+                    renderDashboard(user);
                 } else {
                     showView('register-view');
                 }
             } catch (err) {
                 hideLoading();
-                showMsg('連線錯誤', err.message);
+                showMsg('連線失敗', '無法讀取資料，請檢查網路。\n' + err.message);
             }
         }
 
+        // 渲染儀表板
+        function renderDashboard(user) {
+            // 1. 設定 Header
+            document.getElementById('header-name').textContent = user.name;
+            
+            // 2. 填入「個人資料」分頁
+            document.getElementById('p-group').textContent = user.group_name;
+            document.getElementById('p-name').textContent = user.name;
+            // 注意：因為目前 API 只回傳 name/group，若要顯示 email/phone，
+            // 後端 checkUser 需增加回傳欄位。目前先顯示 User 物件有的，沒有的留空或待補。
+            // (架構師備註：若要顯示詳細，我們之後再優化後端 checkUser)
+            
+            // 3. 載入賣場
+            loadMarkets(user.lineUserId);
+
+            // 4. 顯示畫面
+            showView('dashboard-view');
+        }
+
+        // 載入賣場
+        async function loadMarkets(uid) {
+            const container = document.getElementById('market-list-container');
+            container.innerHTML = '<div class="text-center py-3"><div class="spinner-border spinner-border-sm text-primary"></div></div>';
+            
+            try {
+                const markets = await callApi('getMarkets', { uid });
+                container.innerHTML = '';
+                
+                if (markets.length === 0) {
+                    container.innerHTML = '<div class="alert alert-light text-center border">暫無專屬賣場</div>';
+                    return;
+                }
+
+                markets.forEach(m => {
+                    container.innerHTML += `
+                        <div class="market-item fade-in">
+                            <h6 class="fw-bold mb-1 text-dark">${m.sheetName}</h6>
+                            <p class="text-muted small mb-2">${m.desc || '無描述'}</p>
+                            <a href="${m.link}" target="_blank" class="btn btn-primary btn-sm w-100 rounded-pill">
+                                前往下單 <i class="bi bi-arrow-right-short"></i>
+                            </a>
+                        </div>
+                    `;
+                });
+            } catch (err) {
+                container.innerHTML = `<div class="text-danger small text-center">載入失敗: ${err.message}</div>`;
+            }
+        }
+
+        // 註冊邏輯 (維持不變)
         async function doRegister() {
             const email = document.getElementById('reg-email').value;
-            const name = document.getElementById('reg-name').value; // 群內名稱
+            const name = document.getElementById('reg-name').value;
             const receiver = document.getElementById('reg-receiver').value;
             const phone = document.getElementById('reg-phone').value;
             const store = document.getElementById('reg-store').value;
             
-            showLoading();
+            showLoading('註冊中...');
             try {
                 await callApi('register', { uid: currentUid, email, name, receiver, phone, store });
-                await checkUserStatus(currentUid);
+                location.reload(); // 註冊成功直接刷新
             } catch (err) {
                 hideLoading();
                 showMsg('註冊失敗', err.message);
             }
         }
 
-        async function loadMarkets(uid) {
-            const list = document.getElementById('market-list');
-            list.innerHTML = '<div class="text-center text-muted"><small>載入中...</small></div>';
-            try {
-                const markets = await callApi('getMarkets', { uid });
-                list.innerHTML = '';
-                if (markets.length === 0) {
-                    list.innerHTML = '<div class="alert alert-light text-center">無專屬賣場</div>';
-                    return;
-                }
-                markets.forEach(m => {
-                    list.innerHTML += `
-                        <div class="custom-card market-item">
-                            <h5 class="fw-bold">${m.sheetName}</h5>
-                            <p class="text-muted small">${m.desc || ''}</p>
-                            <a href="${m.link}" target="_blank" class="btn btn-outline-primary w-100 btn-sm">前往下單</a>
-                        </div>
-                    `;
-                });
-            } catch (err) {
-                list.innerHTML = '<div class="text-danger small">載入失敗</div>';
+        // === 儀表板切換邏輯 ===
+        function switchTab(tabName, btnElement) {
+            // 1. 按鈕樣式切換
+            document.querySelectorAll('.menu-btn').forEach(btn => btn.classList.remove('active'));
+            btnElement.classList.add('active');
+
+            // 2. 內容區塊切換
+            document.querySelectorAll('.content-section').forEach(sec => sec.classList.remove('active'));
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+
+            // 3. 特殊處理：如果是點擊訂單，嘗試載入 (目前是假的)
+            if (tabName === 'orders') {
+                // loadOrders(); // 未來實作
             }
         }
 
-        function showLoading() { document.getElementById('loading-overlay').classList.remove('hidden'); }
+        // 重新整理功能
+        function refreshData() {
+            showLoading('更新資料中...');
+            // 簡單暴力：直接重整網頁，最乾淨
+            location.reload();
+        }
+
+        // 工具函式
+        function showLoading(txt='連線中...') { document.getElementById('loading-text').innerText=txt; document.getElementById('loading-overlay').classList.remove('hidden'); }
         function hideLoading() { document.getElementById('loading-overlay').classList.add('hidden'); }
         function showView(id) {
             document.getElementById('register-view').classList.add('hidden');
@@ -178,7 +321,8 @@
             document.getElementById(id).classList.remove('hidden');
         }
         function showMsg(title, msg) {
-            document.getElementById('infoModalBody').innerText = msg;
+            document.getElementById('modalTitle').innerText = title;
+            document.getElementById('modalBody').innerText = msg;
             new bootstrap.Modal(document.getElementById('infoModal')).show();
         }
     </script>
